@@ -114,11 +114,13 @@ class UVBConnectorWooCommerce_Public {
     }
 
     /**
-     * Function to handle Store API requests and set the blocked transient
+     * Function to handle Store API requests, set the blocked transient, and
+     * reject protected payment methods for blocked customers during checkout.
      *
      * @param mixed $object WC_Customer or WC_Order.
      * @param mixed $request WP_REST_Request.
      * @return void
+     * @throws \Automattic\WooCommerce\StoreApi\Exceptions\RouteException When a blocked customer selects a protected payment method.
      */
     public function check_if_email_is_flagged_store_api($object, $request) {
         if (!$request || !is_object($request) || !method_exists($request, 'get_param')) {
@@ -140,7 +142,10 @@ class UVBConnectorWooCommerce_Public {
         $countryCode = $address['country'] ?? '';
         $postalCode = $address['postcode'] ?? '';
         $phoneNumber = $billing['phone'] ?? ($address['phone'] ?? '');
-        $addressLine = $address['address_1'] ?? '';
+        $addressLine = implode(' ', array_filter([
+            $address['address_1'] ?? '',
+            $address['address_2'] ?? '',
+        ]));
 
         $cartToken = '';
         if (method_exists($request, 'get_header')) {
@@ -150,7 +155,49 @@ class UVBConnectorWooCommerce_Public {
             $cartToken = sanitize_text_field(wp_unslash($_SERVER['HTTP_CART_TOKEN']));
         }
 
-        $this->check_and_store_blocked($email, $countryCode, $postalCode, $phoneNumber, $addressLine, $cartToken, true);
+        $blocked = $this->check_and_store_blocked($email, $countryCode, $postalCode, $phoneNumber, $addressLine, $cartToken, true);
+        $paymentMethod = sanitize_text_field((string) $request->get_param('payment_method'));
+
+        if ($blocked === true && $this->isProtectedPaymentMethod($paymentMethod)) {
+            throw new \Automattic\WooCommerce\StoreApi\Exceptions\RouteException(
+                'uvb_payment_method_unavailable',
+                __('The selected payment method is not available. Please choose another one.', 'uvb-connector-woocommerce'),
+                400
+            );
+        }
+    }
+
+    /**
+     * Validate protected payment methods during the classic checkout flow.
+     *
+     * @param array $data Checkout data.
+     * @param WP_Error $errors Checkout validation errors.
+     * @return void
+     */
+    public function validate_selected_payment_method($data, $errors) {
+        $paymentMethod = sanitize_text_field($data['payment_method'] ?? '');
+        if (!$this->isProtectedPaymentMethod($paymentMethod)) {
+            return;
+        }
+
+        $useShippingAddress = !empty($data['ship_to_different_address']);
+        $addressPrefix = $useShippingAddress ? 'shipping_' : 'billing_';
+        $email = $data['billing_email'] ?? '';
+        $countryCode = $data[$addressPrefix . 'country'] ?? '';
+        $postalCode = $data[$addressPrefix . 'postcode'] ?? '';
+        $phoneNumber = $data['shipping_phone'] ?? ($data['billing_phone'] ?? '');
+        $addressLine = implode(' ', array_filter([
+            $data[$addressPrefix . 'address_1'] ?? '',
+            $data[$addressPrefix . 'address_2'] ?? '',
+        ]));
+
+        $blocked = $this->check_and_store_blocked($email, $countryCode, $postalCode, $phoneNumber, $addressLine);
+        if ($blocked === true) {
+            $errors->add(
+                'uvb_payment_method_unavailable',
+                __('The selected payment method is not available. Please choose another one.', 'uvb-connector-woocommerce')
+            );
+        }
     }
 
     /**
@@ -163,12 +210,12 @@ class UVBConnectorWooCommerce_Public {
      * @param string $addressLine
      * @param string $cartToken
      * @param bool $allowRequestCartToken
-     * @return void
+     * @return bool|null True when blocked, false when allowed, and null when the check could not be completed.
      */
     private function check_and_store_blocked($email, $countryCode, $postalCode, $phoneNumber, $addressLine, $cartToken = '', $allowRequestCartToken = false) {
         $email = sanitize_email($email);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return;
+            return null;
         }
 
         $countryCode = sanitize_text_field($countryCode);
@@ -178,7 +225,7 @@ class UVBConnectorWooCommerce_Public {
 
         $sessionBlockedStateKey = $this->getSessionBlockedStateKey($cartToken, $allowRequestCartToken);
         if (!$sessionBlockedStateKey) {
-            return;
+            return null;
         }
 
         $sameRequestCacheKey = $this->getSameRequestCacheKey(
@@ -191,18 +238,39 @@ class UVBConnectorWooCommerce_Public {
         );
         $cachedRequestResult = get_transient($sameRequestCacheKey);
         if (is_array($cachedRequestResult) && array_key_exists('blocked', $cachedRequestResult)) {
-            set_transient($sessionBlockedStateKey, (bool) $cachedRequestResult['blocked'], 86400);
-            return;
+            $blocked = (bool) $cachedRequestResult['blocked'];
+            set_transient($sessionBlockedStateKey, $blocked, 86400);
+
+            return $blocked;
         }
 
-        $response = $this->checkInUVBService($email, $countryCode, $postalCode, $phoneNumber, $addressLine);
-        if ($response === null) {
-            return;
+        try {
+            $response = $this->checkInUVBService($email, $countryCode, $postalCode, $phoneNumber, $addressLine);
+        } catch (\Throwable $exception) {
+            return null;
+        }
+
+        if (!is_object($response) || !isset($response->result) || !is_object($response->result) || !isset($response->result->blocked)) {
+            return null;
         }
 
         $blocked = $response->result->blocked ? true : false;
         set_transient($sameRequestCacheKey, ['blocked' => $blocked], self::REQUEST_CACHE_TTL);
         set_transient($sessionBlockedStateKey, $blocked, 86400);
+
+        return $blocked;
+    }
+
+    private function isProtectedPaymentMethod($paymentMethod) {
+        if (!$paymentMethod) {
+            return false;
+        }
+
+        $options = get_option('uvb_connector_woocommerce_options');
+        $options = is_array($options) ? $options : [];
+        $paymentMethodsToHide = $options['payment_methods_to_hide'] ?? [];
+
+        return is_array($paymentMethodsToHide) && in_array($paymentMethod, $paymentMethodsToHide, true);
     }
 
     private function getSameRequestCacheKey($sessionBlockedStateKey, $email, $countryCode, $postalCode, $phoneNumber, $addressLine) {

@@ -73,6 +73,11 @@ msgstr ""
 msgid "These payment methods are shown only if the customer has failed the check."
 msgstr ""
 
+#: public/class-uvb-connector-woocommerce-public.php:164
+#: public/class-uvb-connector-woocommerce-public.php:198
+msgid "The selected payment method is not available. Please choose another one."
+msgstr ""
+
 #: admin/class-uvb-connector-woocommerce-settings.php:159
 msgid "Enter your API keys and set your preferences. "
 msgstr ""

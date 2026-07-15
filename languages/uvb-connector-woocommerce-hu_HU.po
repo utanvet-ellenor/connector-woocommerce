@@ -74,6 +74,11 @@ msgstr "Tartalék fizetési módok"
 msgid "These payment methods are shown only if the customer has failed the check."
 msgstr "Ezek a fizetési módok csak akkor jelennek meg, ha a vásárló nem ment át az ellenőrzésen."
 
+#: public/class-uvb-connector-woocommerce-public.php:164
+#: public/class-uvb-connector-woocommerce-public.php:198
+msgid "The selected payment method is not available. Please choose another one."
+msgstr "A kiválasztott fizetési mód nem érhető el. Kérjük, válasszon másikat."
+
 #: admin/class-uvb-connector-woocommerce-settings.php:159
 msgid "Enter your API keys and set your preferences. "
 msgstr "Állítsd be az API kulcsaidat. "
