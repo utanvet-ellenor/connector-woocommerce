@@ -1,8 +1,8 @@
 <?php return array(
     'root' => array(
-        'name' => 'webmenedzser/uvb-connector-woocommerce',
-        'pretty_version' => '4.1.1',
-        'version' => '4.1.1.0',
+        'name' => 'utanvet-ellenor/connector-woocommerce',
+        'pretty_version' => '4.2.0',
+        'version' => '4.2.0.0',
         'reference' => null,
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
@@ -19,9 +19,9 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
-        'webmenedzser/uvb-connector-woocommerce' => array(
-            'pretty_version' => '4.1.1',
-            'version' => '4.1.1.0',
+        'utanvet-ellenor/connector-woocommerce' => array(
+            'pretty_version' => '4.2.0',
+            'version' => '4.2.0.0',
             'reference' => null,
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
