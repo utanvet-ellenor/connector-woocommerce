@@ -104,6 +104,7 @@ class UVBConnectorWooCommerce {
 		 * core plugin.
 		 */
 		require_once plugin_dir_path( __DIR__ ) . 'includes/class-uvb-connector-woocommerce-loader.php';
+		require_once plugin_dir_path( __DIR__ ) . 'includes/class-uvb-connector-woocommerce-api-logger.php';
 
 		/**
 		 * The class responsible for defining internationalization functionality

@@ -128,10 +128,22 @@ class UVBConnectorWooCommerce_Admin {
         $client->threshold = $this->threshold;
         $client->sandbox = !$this->production;
 
-        $response = $client->sendRequest();
-        if (!$response) {
+        try {
+            $response = $client->sendRequest();
+        } catch (\Throwable $exception) {
+            UVBConnectorWooCommerce_Api_Logger::logFailure('order_flag', 'exception', $exception);
             return;
         }
+
+        if (!is_object($response) || !isset($response->result) || !is_object($response->result) || !isset($response->result->reason)) {
+            UVBConnectorWooCommerce_Api_Logger::logFailure(
+                'order_flag',
+                $response === null ? 'empty_response' : 'invalid_response'
+            );
+            return;
+        }
+
+        UVBConnectorWooCommerce_Api_Logger::logRecovery('order_flag');
 
         $flagValue = $response->result->reason;
         if (!$flagValue) {
@@ -281,7 +293,21 @@ class UVBConnectorWooCommerce_Admin {
         $client->phoneNumber = $phoneNumber;
         $client->addressLine = $addressLine;
 
-        return $client->sendSignal();
+        try {
+            $response = $client->sendSignal();
+        } catch (\Throwable $exception) {
+            UVBConnectorWooCommerce_Api_Logger::logFailure('signal', 'exception', $exception);
+            return null;
+        }
+
+        if (!is_object($response)) {
+            UVBConnectorWooCommerce_Api_Logger::logFailure('signal', 'empty_response');
+            return null;
+        }
+
+        UVBConnectorWooCommerce_Api_Logger::logRecovery('signal');
+
+        return $response;
     }
 
     public function addUvbActionsToBulkMenu($actions)

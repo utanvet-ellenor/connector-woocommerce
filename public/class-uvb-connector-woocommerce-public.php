@@ -247,12 +247,19 @@ class UVBConnectorWooCommerce_Public {
         try {
             $response = $this->checkInUVBService($email, $countryCode, $postalCode, $phoneNumber, $addressLine);
         } catch (\Throwable $exception) {
+            UVBConnectorWooCommerce_Api_Logger::logFailure('request', 'exception', $exception);
             return null;
         }
 
         if (!is_object($response) || !isset($response->result) || !is_object($response->result) || !isset($response->result->blocked)) {
+            UVBConnectorWooCommerce_Api_Logger::logFailure(
+                'request',
+                $response === null ? 'empty_response' : 'invalid_response'
+            );
             return null;
         }
+
+        UVBConnectorWooCommerce_Api_Logger::logRecovery('request');
 
         $blocked = $response->result->blocked ? true : false;
         set_transient($sameRequestCacheKey, ['blocked' => $blocked], self::REQUEST_CACHE_TTL);
