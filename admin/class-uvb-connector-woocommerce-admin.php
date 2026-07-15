@@ -121,10 +121,10 @@ class UVBConnectorWooCommerce_Admin {
         $order = new WC_Order($orderId);
         $client = new Client($this->publicKey, $this->privateKey);
         $client->email = $order->get_billing_email();
-        $client->countryCode = $order->get_shipping_country();
-        $client->postalCode = $order->get_shipping_postcode();
-        $client->phoneNumber = $order->get_shipping_phone();
-        $client->addressLine = implode(' ', [$order->get_shipping_address_1(), $order->get_shipping_address_2()]);
+        $client->countryCode = $order->get_shipping_country() ?: $order->get_billing_country();
+        $client->postalCode = $order->get_shipping_postcode() ?: $order->get_billing_postcode();
+        $client->phoneNumber = $order->get_shipping_phone() ?: $order->get_billing_phone();
+        $client->addressLine = $this->getOrderAddressLine($order);
         $client->threshold = $this->threshold;
         $client->sandbox = !$this->production;
 
@@ -277,12 +277,10 @@ class UVBConnectorWooCommerce_Admin {
         }
 
         $email = $order->get_billing_email();
-        $phoneNumber = $order->get_shipping_phone();
-        $countryCode = $order->get_shipping_country();
-        $postalCode = $order->get_shipping_postcode();
-        $addressLine1 = $order->get_shipping_address_1();
-        $addressLine2 = $order->get_shipping_address_2();
-        $addressLine = implode(' ', [$addressLine1, $addressLine2]);
+        $phoneNumber = $order->get_shipping_phone() ?: $order->get_billing_phone();
+        $countryCode = $order->get_shipping_country() ?: $order->get_billing_country();
+        $postalCode = $order->get_shipping_postcode() ?: $order->get_billing_postcode();
+        $addressLine = $this->getOrderAddressLine($order);
 
         $client = new Client($this->publicKey, $this->privateKey);
         $client->email = $email;
@@ -308,6 +306,20 @@ class UVBConnectorWooCommerce_Admin {
         UVBConnectorWooCommerce_Api_Logger::logRecovery('signal');
 
         return $response;
+    }
+
+    private function getOrderAddressLine($order) {
+        $shippingAddressLine1 = $order->get_shipping_address_1();
+        $shippingAddressLine2 = $order->get_shipping_address_2();
+
+        if ($shippingAddressLine1 || $shippingAddressLine2) {
+            return implode(' ', array_filter([$shippingAddressLine1, $shippingAddressLine2]));
+        }
+
+        return implode(' ', array_filter([
+            $order->get_billing_address_1(),
+            $order->get_billing_address_2(),
+        ]));
     }
 
     public function addUvbActionsToBulkMenu($actions)
