@@ -238,13 +238,16 @@ class UVBConnectorWooCommerce_Settings
 
         foreach ($options as $option) {
             $for = "payment_methods_to_hide_$option->id";
-            $html .= "<label for='$for'>";
+            $escapedFor = esc_attr($for);
+            $escapedId = esc_attr($option->id);
+            $escapedTitle = esc_html($option->title);
+            $html .= "<label for='$escapedFor'>";
 
             $html .= "<input 
               name='uvb_connector_woocommerce_options[payment_methods_to_hide][]' 
-              id='$for' 
+              id='$escapedFor'
               type='checkbox' 
-              value='$option->id'";
+              value='$escapedId'";
 
             if (in_array($option->id, $values)) {
               $html .= "checked";
@@ -252,7 +255,7 @@ class UVBConnectorWooCommerce_Settings
 
             $html .= "/>";
 
-            $html .= "$option->title";
+            $html .= $escapedTitle;
             $html .= "</label><br/>";
         }
 
@@ -276,13 +279,16 @@ class UVBConnectorWooCommerce_Settings
 
         foreach ($options as $option) {
             $for = "fallback_payment_methods_$option->id";
-            $html .= "<label for='$for'>";
+            $escapedFor = esc_attr($for);
+            $escapedId = esc_attr($option->id);
+            $escapedTitle = esc_html($option->title);
+            $html .= "<label for='$escapedFor'>";
 
             $html .= "<input 
               name='uvb_connector_woocommerce_options[fallback_payment_methods][]' 
-              id='$for' 
+              id='$escapedFor'
               type='checkbox' 
-              value='$option->id'";
+              value='$escapedId'";
 
             if (in_array($option->id, $values)) {
                 $html .= "checked";
@@ -290,7 +296,7 @@ class UVBConnectorWooCommerce_Settings
 
             $html .= "/>";
 
-            $html .= "$option->title";
+            $html .= $escapedTitle;
             $html .= "</label><br/>";
         }
 
