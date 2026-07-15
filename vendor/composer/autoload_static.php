@@ -7,14 +7,14 @@ namespace Composer\Autoload;
 class ComposerStaticInitb829713ef21f678c13b970670ff136f3
 {
     public static $prefixLengthsPsr4 = array (
-        'U' => 
+        'U' =>
         array (
             'UtanvetEllenor\\' => 15,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'UtanvetEllenor\\' => 
+        'UtanvetEllenor\\' =>
         array (
             0 => __DIR__ . '/..' . '/utanvet-ellenor/client-php/src',
         ),
