@@ -35,6 +35,7 @@ class UVBConnectorWooCommerce_Public {
 	 */
 	private $plugin_name;
     public const TRANSIENT_PREFIX = 'utanvet_ellenor_request_is_blocked';
+    private const REQUEST_CACHE_TTL = 10;
 
 	/**
 	 * The version of this plugin.
@@ -149,7 +150,7 @@ class UVBConnectorWooCommerce_Public {
             $cartToken = sanitize_text_field(wp_unslash($_SERVER['HTTP_CART_TOKEN']));
         }
 
-        $this->check_and_store_blocked($email, $countryCode, $postalCode, $phoneNumber, $addressLine, $cartToken);
+        $this->check_and_store_blocked($email, $countryCode, $postalCode, $phoneNumber, $addressLine, $cartToken, true);
     }
 
     /**
@@ -160,9 +161,11 @@ class UVBConnectorWooCommerce_Public {
      * @param string $postalCode
      * @param string $phoneNumber
      * @param string $addressLine
+     * @param string $cartToken
+     * @param bool $allowRequestCartToken
      * @return void
      */
-    private function check_and_store_blocked($email, $countryCode, $postalCode, $phoneNumber, $addressLine, $cartToken = '') {
+    private function check_and_store_blocked($email, $countryCode, $postalCode, $phoneNumber, $addressLine, $cartToken = '', $allowRequestCartToken = false) {
         $email = sanitize_email($email);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return;
@@ -173,18 +176,49 @@ class UVBConnectorWooCommerce_Public {
         $phoneNumber = sanitize_text_field($phoneNumber);
         $addressLine = sanitize_text_field($addressLine);
 
+        $sessionBlockedStateKey = $this->getSessionBlockedStateKey($cartToken, $allowRequestCartToken);
+        if (!$sessionBlockedStateKey) {
+            return;
+        }
+
+        $sameRequestCacheKey = $this->getSameRequestCacheKey(
+            $sessionBlockedStateKey,
+            $email,
+            $countryCode,
+            $postalCode,
+            $phoneNumber,
+            $addressLine
+        );
+        $cachedRequestResult = get_transient($sameRequestCacheKey);
+        if (is_array($cachedRequestResult) && array_key_exists('blocked', $cachedRequestResult)) {
+            set_transient($sessionBlockedStateKey, (bool) $cachedRequestResult['blocked'], 86400);
+            return;
+        }
+
         $response = $this->checkInUVBService($email, $countryCode, $postalCode, $phoneNumber, $addressLine);
         if ($response === null) {
             return;
         }
 
-        $key = $this->getSessionKey($cartToken);
-        if (!$key) {
-            return;
-        }
-
         $blocked = $response->result->blocked ? true : false;
-        set_transient($key, $blocked, 86400);
+        set_transient($sameRequestCacheKey, ['blocked' => $blocked], self::REQUEST_CACHE_TTL);
+        set_transient($sessionBlockedStateKey, $blocked, 86400);
+    }
+
+    private function getSameRequestCacheKey($sessionBlockedStateKey, $email, $countryCode, $postalCode, $phoneNumber, $addressLine) {
+        $payload = wp_json_encode([
+            'email' => $email,
+            'country_code' => $countryCode,
+            'postal_code' => $postalCode,
+            'phone_number' => $phoneNumber,
+            'address_line' => $addressLine,
+        ]);
+
+        return implode('_', [
+            self::TRANSIENT_PREFIX,
+            'request',
+            hash('sha256', $sessionBlockedStateKey . "\0" . $payload),
+        ]);
     }
 
     /**
@@ -265,8 +299,10 @@ class UVBConnectorWooCommerce_Public {
         return $available_gateways;
     }
 
-    public function getSessionKey($cartToken = null) {
-        $cartToken = $cartToken ?: $this->getCartTokenFromRequest();
+    public function getSessionBlockedStateKey($cartToken = null, $allowRequestCartToken = true) {
+        if (!$cartToken && $allowRequestCartToken) {
+            $cartToken = $this->getCartTokenFromRequest();
+        }
         if ($cartToken) {
             return implode('_', [self::TRANSIENT_PREFIX, hash('sha256', $cartToken)]);
         }
@@ -319,12 +355,12 @@ class UVBConnectorWooCommerce_Public {
             return $available_gateways_without_fallback;
         }
 
-        $key = $this->getSessionKey();
-        if (!$key) {
+        $sessionBlockedStateKey = $this->getSessionBlockedStateKey();
+        if (!$sessionBlockedStateKey) {
             return $available_gateways_without_fallback;
         }
 
-        $blocked = get_transient($key) ?? false;
+        $blocked = get_transient($sessionBlockedStateKey) ?? false;
         if (!$blocked) {
             return $available_gateways_without_fallback;
         }
