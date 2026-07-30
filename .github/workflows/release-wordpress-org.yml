@@ -1,9 +1,10 @@
 name: Release to WordPress.org
 
 on:
-  release:
-    types:
-      - published
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
     inputs:
       tag:
@@ -12,7 +13,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: wordpress-org-release
@@ -20,12 +21,11 @@ concurrency:
 
 env:
   PLUGIN_SLUG: uv-b-connector-for-woocommerce
-  RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+  RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
 
 jobs:
   deploy:
-    name: Deploy to WordPress.org
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false }}
+    name: Publish release
     runs-on: ubuntu-latest
 
     steps:
@@ -72,6 +72,7 @@ jobs:
           fi
 
       - name: Build WordPress.org package
+        id: build
         shell: bash
         env:
           BUILD_DIR: ${{ runner.temp }}/${{ env.PLUGIN_SLUG }}
@@ -95,8 +96,11 @@ jobs:
           if previous_tag="$(git describe --tags --abbrev=0 --match '[0-9]*' "${RELEASE_TAG}^" 2>/dev/null)"; then
             commit_range="${previous_tag}..${RELEASE_TAG}"
           else
+            previous_tag=""
             commit_range="$RELEASE_TAG"
           fi
+
+          printf 'previous_tag=%s\n' "$previous_tag" >> "$GITHUB_OUTPUT"
 
           mapfile -t commit_subjects < <(
             git log --no-merges --format='%s' "$commit_range"
@@ -121,6 +125,13 @@ jobs:
             printf '* %s\n' "${changelog_entries[@]}"
           } >> "$BUILD_DIR/readme.txt"
 
+          release_zip="${RUNNER_TEMP}/${PLUGIN_SLUG}.zip"
+          (
+            cd "$RUNNER_TEMP"
+            zip -qr "$release_zip" "$PLUGIN_SLUG"
+          )
+          printf 'release_zip=%s\n' "$release_zip" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to WordPress.org SVN
         uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2 # 2.3.0
         env:
@@ -129,3 +140,37 @@ jobs:
           SLUG: ${{ env.PLUGIN_SLUG }}
           VERSION: ${{ env.RELEASE_TAG }}
           BUILD_DIR: ${{ runner.temp }}/${{ env.PLUGIN_SLUG }}
+
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_TAG: ${{ steps.build.outputs.previous_tag }}
+          RELEASE_ZIP: ${{ steps.build.outputs.release_zip }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "GitHub release ${RELEASE_TAG} already exists; skipping."
+            exit 0
+          fi
+
+          if [[ ! -f "$RELEASE_ZIP" ]]; then
+            echo "::error title=Missing release archive::The generated plugin ZIP could not be found."
+            exit 1
+          fi
+
+          release_args=(
+            "$RELEASE_TAG"
+            --repo "$GITHUB_REPOSITORY"
+            --verify-tag
+            --generate-notes
+            --title "$RELEASE_TAG"
+          )
+
+          if [[ -n "$PREVIOUS_TAG" ]]; then
+            release_args+=(--notes-start-tag "$PREVIOUS_TAG")
+          fi
+
+          release_args+=("$RELEASE_ZIP")
+          gh release create "${release_args[@]}"
