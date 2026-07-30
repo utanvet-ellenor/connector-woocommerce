@@ -85,7 +85,21 @@ jobs:
             --directory="$BUILD_DIR" \
             --exclude=".github" \
             --exclude=".gitattributes" \
-            --exclude=".gitignore"
+            --exclude=".gitignore" \
+            --exclude="vendor"
+
+          composer --working-dir="$BUILD_DIR" install \
+            --no-dev \
+            --prefer-dist \
+            --optimize-autoloader \
+            --no-interaction \
+            --no-progress
+
+          if [[ ! -s "$BUILD_DIR/vendor/autoload.php" ||
+                ! -s "$BUILD_DIR/vendor/composer/installed.php" ]]; then
+            echo "::error title=Incomplete dependencies::The release vendor directory was not built correctly."
+            exit 1
+          fi
 
           mv "$BUILD_DIR/README.md" "$BUILD_DIR/readme.txt"
           sed -i \
@@ -130,6 +144,13 @@ jobs:
             cd "$RUNNER_TEMP"
             zip -qr "$release_zip" "$PLUGIN_SLUG"
           )
+
+          if ! unzip -Z1 "$release_zip" |
+            grep -Fx "${PLUGIN_SLUG}/vendor/autoload.php" > /dev/null; then
+            echo "::error title=Missing dependencies::The release archive does not contain vendor/autoload.php."
+            exit 1
+          fi
+
           printf 'release_zip=%s\n' "$release_zip" >> "$GITHUB_OUTPUT"
 
       - name: Deploy to WordPress.org SVN
