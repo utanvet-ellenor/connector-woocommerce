@@ -1,0 +1,131 @@
+name: Release to WordPress.org
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Git tag to release (for example, 4.3.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wordpress-org-release
+  cancel-in-progress: false
+
+env:
+  PLUGIN_SLUG: uv-b-connector-for-woocommerce
+  RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  deploy:
+    name: Deploy to WordPress.org
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$RELEASE_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "::error title=Invalid release tag::The tag must contain three or four numeric parts, for example 4.3.0."
+            exit 1
+          fi
+
+          tagged_commit="$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")"
+          checked_out_commit="$(git rev-parse HEAD)"
+
+          if [[ "$checked_out_commit" != "$tagged_commit" ]]; then
+            echo "::error title=Incorrect checkout::HEAD does not match tag ${RELEASE_TAG}."
+            exit 1
+          fi
+
+          plugin_header_version="$(
+            sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+)[[:space:]]*$/\1/p' uvb-connector-woocommerce.php
+          )"
+          plugin_constant_version="$(
+            sed -nE "s/^[[:space:]]*define\( 'UVB_CONNECTOR_WOOCOMMERCE_VERSION', '([^']+)' \);[[:space:]]*$/\1/p" uvb-connector-woocommerce.php
+          )"
+          composer_version="$(
+            sed -nE 's/^[[:space:]]*"version":[[:space:]]*"([^"]+)",?[[:space:]]*$/\1/p' composer.json
+          )"
+
+          if [[ "$plugin_header_version" != "$RELEASE_TAG" ||
+                "$plugin_constant_version" != "$RELEASE_TAG" ||
+                "$composer_version" != "$RELEASE_TAG" ]]; then
+            echo "::error title=Version mismatch::Tag=${RELEASE_TAG}, plugin header=${plugin_header_version}, plugin constant=${plugin_constant_version}, composer=${composer_version}."
+            exit 1
+          fi
+
+      - name: Build WordPress.org package
+        shell: bash
+        env:
+          BUILD_DIR: ${{ runner.temp }}/${{ env.PLUGIN_SLUG }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$BUILD_DIR"
+          git archive HEAD | tar \
+            --extract \
+            --directory="$BUILD_DIR" \
+            --exclude=".github" \
+            --exclude=".gitattributes" \
+            --exclude=".gitignore"
+
+          mv "$BUILD_DIR/README.md" "$BUILD_DIR/readme.txt"
+          sed -i \
+            -e '/^Stable tag:/d' \
+            -e "/^Tested up to:/a Stable tag: ${RELEASE_TAG}" \
+            "$BUILD_DIR/readme.txt"
+
+          if previous_tag="$(git describe --tags --abbrev=0 --match '[0-9]*' "${RELEASE_TAG}^" 2>/dev/null)"; then
+            commit_range="${previous_tag}..${RELEASE_TAG}"
+          else
+            commit_range="$RELEASE_TAG"
+          fi
+
+          mapfile -t commit_subjects < <(
+            git log --no-merges --format='%s' "$commit_range"
+          )
+
+          changelog_entries=()
+          for subject in "${commit_subjects[@]}"; do
+            if [[ "$subject" =~ ^(Version\ bump|Bumped\ version\ number|Released\ [0-9]+(\.[0-9]+){2,3}|[0-9]+(\.[0-9]+){2,3})$ ]]; then
+              continue
+            fi
+
+            changelog_entries+=("$subject")
+          done
+
+          if (( ${#changelog_entries[@]} == 0 )); then
+            changelog_entries=("Maintenance release.")
+          fi
+
+          {
+            printf '\n== Changelog ==\n\n'
+            printf '= %s =\n\n' "$RELEASE_TAG"
+            printf '* %s\n' "${changelog_entries[@]}"
+          } >> "$BUILD_DIR/readme.txt"
+
+      - name: Deploy to WordPress.org SVN
+        uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2 # 2.3.0
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: ${{ env.PLUGIN_SLUG }}
+          VERSION: ${{ env.RELEASE_TAG }}
+          BUILD_DIR: ${{ runner.temp }}/${{ env.PLUGIN_SLUG }}
