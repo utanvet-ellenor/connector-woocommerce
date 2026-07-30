@@ -90,6 +90,33 @@ msgstr ""
 msgid "<p><em>Calculated with the following formula: <code>(good-bad) / all</code>, so a 0.5 reputation can mean 6 successful and 2 rejected deliveries.</em></p>"
 msgstr ""
 
+#: includes/emails/class-uvb-connector-woocommerce-email-customer-uvb-flagged.php:28
+msgid "Refused delivery"
+msgstr ""
+
+#: includes/emails/class-uvb-connector-woocommerce-email-customer-uvb-flagged.php:29
+msgid "This email is sent to customers when a delivery is marked as refused."
+msgstr ""
+
+#: includes/emails/class-uvb-connector-woocommerce-email-customer-uvb-flagged.php:64
+msgid "[{site_title}]: Delivery for order #{order_number} was refused"
+msgstr ""
+
+#: includes/emails/class-uvb-connector-woocommerce-email-customer-uvb-flagged.php:73
+msgid "Refused delivery: #{order_number}"
+msgstr ""
+
+#: includes/emails/class-uvb-connector-woocommerce-email-customer-uvb-flagged.php:82
+msgid "Please contact us to resolve this matter."
+msgstr ""
+
+#. translators: %s: Order number.
+#: templates/emails/customer-uvb-flagged.php:25
+#: templates/emails/plain/customer-uvb-flagged.php:21
+#, php-format
+msgid "The delivery of order #%s was recorded as refused in the ProteCOD system."
+msgstr ""
+
 #: Possible value of reason
 msgid "Test hash was used."
 msgstr "Test hash was used."

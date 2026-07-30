@@ -76,6 +76,7 @@ class UVBConnectorWooCommerce {
 
 		$this->load_dependencies();
 		$this->set_locale();
+		$this->define_uvb_flagged_email_hooks();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
 
@@ -141,6 +142,48 @@ class UVBConnectorWooCommerce {
 		$plugin_i18n = new UVBConnectorWooCommerce_i18n();
 
 		$this->loader->add_action( 'plugins_loaded', $plugin_i18n, 'load_plugin_textdomain' );
+	}
+
+	/**
+	 * Register the hooks required by the WooCommerce email system.
+	 *
+	 * @since 4.3.0
+	 */
+	private function define_uvb_flagged_email_hooks() {
+		$this->loader->add_filter( 'woocommerce_email_actions', $this, 'add_uvb_flagged_email_action' );
+		$this->loader->add_filter( 'woocommerce_email_classes', $this, 'add_uvb_flagged_email' );
+	}
+
+	/**
+	 * Make the custom order status a transactional email action.
+	 *
+	 * @since 4.3.0
+	 * @param array $email_actions WooCommerce transactional email actions.
+	 * @return array
+	 */
+	public function add_uvb_flagged_email_action( $email_actions ) {
+		$email_actions[] = 'woocommerce_order_status_uvb_flagged';
+
+		return $email_actions;
+	}
+
+	/**
+	 * Add the customer notification to WooCommerce emails.
+	 *
+	 * @since 4.3.0
+	 * @param array $email_classes Registered WooCommerce email instances.
+	 * @return array
+	 */
+	public function add_uvb_flagged_email( $email_classes ) {
+		if ( ! class_exists( 'WC_Email' ) ) {
+			return $email_classes;
+		}
+
+		require_once plugin_dir_path( __FILE__ ) . 'emails/class-uvb-connector-woocommerce-email-customer-uvb-flagged.php';
+
+		$email_classes['UVBConnectorWooCommerce_Email_Customer_UVB_Flagged'] = new UVBConnectorWooCommerce_Email_Customer_UVB_Flagged();
+
+		return $email_classes;
 	}
 
 	/**

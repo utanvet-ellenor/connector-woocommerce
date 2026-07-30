@@ -2,7 +2,7 @@
   "name": "utanvet-ellenor/connector-woocommerce",
   "description": "Utánvét Ellenőr integration for WooCommerce",
   "minimum-stability": "stable",
-  "version": "4.2.2",
+  "version": "4.3.0",
   "license": "MIT",
   "authors": [
     {

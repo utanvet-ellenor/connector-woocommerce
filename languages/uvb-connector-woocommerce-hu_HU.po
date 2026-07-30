@@ -99,6 +99,35 @@ msgstr ""
 "<p><em>A következő képlettel számolva: <code>(jó - rossz) / összes</code>, vagyis egy 0.5-es "
 "reputáció pl. 6 sikeres és 2 át nem vett rendelést jelenthet.</em></p>"
 
+#: includes/emails/class-uvb-connector-woocommerce-email-customer-uvb-flagged.php:28
+msgid "Refused delivery"
+msgstr "Át nem vett csomag"
+
+#: includes/emails/class-uvb-connector-woocommerce-email-customer-uvb-flagged.php:29
+msgid "This email is sent to customers when a delivery is marked as refused."
+msgstr "Ez az e-mail akkor kerül elküldésre a vásárlónak, amikor a csomagot át nem vettként rögzítik."
+
+#: includes/emails/class-uvb-connector-woocommerce-email-customer-uvb-flagged.php:64
+msgid "[{site_title}]: Delivery for order #{order_number} was refused"
+msgstr "[{site_title}]: Át nem vett csomag – #{order_number}"
+
+#: includes/emails/class-uvb-connector-woocommerce-email-customer-uvb-flagged.php:73
+msgid "Refused delivery: #{order_number}"
+msgstr "Át nem vett csomag: #{order_number}"
+
+#: includes/emails/class-uvb-connector-woocommerce-email-customer-uvb-flagged.php:82
+msgid "Please contact us to resolve this matter."
+msgstr "A helyzet rendezéséhez kérjük, vegye fel velünk a kapcsolatot."
+
+#. translators: %s: Order number.
+#: templates/emails/customer-uvb-flagged.php:25
+#: templates/emails/plain/customer-uvb-flagged.php:21
+#, php-format
+msgid "The delivery of order #%s was recorded as refused in the ProteCOD system."
+msgstr ""
+"A(z) #%s számú rendeléshez tartozó csomagot át nem vettként rögzítettük az Utánvét Ellenőr "
+"rendszerében."
+
 #: Possible value of reason
 msgid "Test hash was used."
 msgstr "Teszt e-mail cím."

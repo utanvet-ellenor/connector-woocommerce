@@ -1,7 +1,7 @@
 === Utánvét Ellenőr ===
 Contributors: ottoradics
 Tags: cash on delivery,check,filter,utánvét,ellenőr,büntetés,utánvét ellenőr,szűrés
-Tested up to: 6.7.1
+Tested up to: 7.0.2
 Requires PHP: 8.1
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
@@ -30,6 +30,10 @@ The idea behind the service is the following:
   * The user enters his e-mail address and leaves the `billing_email` input field.
   * The plugin sends the entered customer and delivery data to our service for verification.
   * The service returns a JSON response and if the customer reputation provided in this payload does not meet the minimum value set by the shop owner in the plugin settings (`Reputation threshold`), the plugin will disable the Cash on Delivery payment method.
+
+### Customer notification
+
+When enabled, the plugin sends a WooCommerce email notification to the customer's billing email address when an order enters the `Rendelést nem vette át` status. The notification is disabled by default and can be enabled and customized under **WooCommerce > Settings > Emails > Át nem vett csomag**.
 
 ### Privacy implications
 
