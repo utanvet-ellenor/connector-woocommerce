@@ -119,8 +119,13 @@ class UVBConnectorWooCommerce_Admin {
     public function flagOrder($orderId)
     {
         $order = new WC_Order($orderId);
+        $email = $order->get_billing_email();
+        if (!$email) {
+            return;
+        }
+
         $client = new Client($this->publicKey, $this->privateKey);
-        $client->email = $order->get_billing_email();
+        $client->email = $email;
         $client->countryCode = $order->get_shipping_country() ?: $order->get_billing_country();
         $client->postalCode = $order->get_shipping_postcode() ?: $order->get_billing_postcode();
         $client->phoneNumber = $order->get_shipping_phone() ?: $order->get_billing_phone();
@@ -277,6 +282,10 @@ class UVBConnectorWooCommerce_Admin {
         }
 
         $email = $order->get_billing_email();
+        if (!$email) {
+            return null;
+        }
+
         $phoneNumber = $order->get_shipping_phone() ?: $order->get_billing_phone();
         $countryCode = $order->get_shipping_country() ?: $order->get_billing_country();
         $postalCode = $order->get_shipping_postcode() ?: $order->get_billing_postcode();
