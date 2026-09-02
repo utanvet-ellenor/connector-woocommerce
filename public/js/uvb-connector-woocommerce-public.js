@@ -300,7 +300,7 @@
         debounceTimer = setTimeout(function() {
             var payload = buildPayload();
             checkUVBService(payload);
-        }, 250);
+        }, 750);
     }
 
     function handleFieldFocus(event) {
