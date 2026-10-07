@@ -210,9 +210,16 @@ class UVBConnectorWooCommerce_Public {
      * @param string $addressLine
      * @param string $cartToken
      * @param bool $allowRequestCartToken
-     * @return bool|null True when blocked, false when allowed, and null when the check could not be completed.
+     * @return bool|null True when blocked, false when allowed, and null when the check was skipped or could not be completed.
      */
     private function check_and_store_blocked($email, $countryCode, $postalCode, $phoneNumber, $addressLine, $cartToken = '', $allowRequestCartToken = false) {
+        $options = get_option('uvb_connector_woocommerce_options');
+        $options = is_array($options) ? $options : [];
+        $paymentMethodsToHide = $options['payment_methods_to_hide'] ?? [];
+        if (!is_array($paymentMethodsToHide) || empty($paymentMethodsToHide)) {
+            return null;
+        }
+
         $email = sanitize_email($email);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return null;
