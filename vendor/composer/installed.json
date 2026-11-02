@@ -2,23 +2,23 @@
     "packages": [
         {
             "name": "utanvet-ellenor/client-php",
-            "version": "2.1.0",
-            "version_normalized": "2.1.0.0",
+            "version": "2.2.0",
+            "version_normalized": "2.2.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/utanvet-ellenor/client-php.git",
-                "reference": "fd69a173130a406dc5e9067353a819bd5ef66e45"
+                "reference": "00164c7946b189094fec7effbdf1a881825abebe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/utanvet-ellenor/client-php/zipball/fd69a173130a406dc5e9067353a819bd5ef66e45",
-                "reference": "fd69a173130a406dc5e9067353a819bd5ef66e45",
+                "url": "https://api.github.com/repos/utanvet-ellenor/client-php/zipball/00164c7946b189094fec7effbdf1a881825abebe",
+                "reference": "00164c7946b189094fec7effbdf1a881825abebe",
                 "shasum": ""
             },
             "require": {
                 "php": ">=7.4 || >=8.0"
             },
-            "time": "2024-11-27T20:23:20+00:00",
+            "time": "2026-09-02T19:31:50+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -39,7 +39,7 @@
             ],
             "description": "Utánvét Ellenőr PHP client library",
             "support": {
-                "source": "https://github.com/utanvet-ellenor/client-php/tree/2.1.0"
+                "source": "https://github.com/utanvet-ellenor/client-php/tree/2.2.0"
             },
             "install-path": "../utanvet-ellenor/client-php"
         }

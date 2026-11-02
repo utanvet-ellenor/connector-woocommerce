@@ -11,5 +11,6 @@ class Reasons
     public const MAILBOX_NON_EXISTENT = 'Mailbox does not exist.';
     public const NOT_FOUND = 'No Signals were found.';
     public const THRESHOLD_NOT_MET = 'Total rate did not meet the minimum threshold set.';
+    public const OPTED_OUT = 'User opted out of the processing of their personal data.';
     public const PASSED = 'Signals found, checks passed.';
 }

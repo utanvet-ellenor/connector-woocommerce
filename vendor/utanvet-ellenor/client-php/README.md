@@ -72,7 +72,37 @@ The API answers with a JSON string, while `$client->sendRequest();` will result 
 }
 ```
 
-If you would like to display these values, use the numeric `totalRate` and/or `good` and `bad` values. Avoid aliasing these values with phrases, as they might mislead users.
+#### Reasons & possible `status` values
+
+The API will return an HTTP 200 status code if the request is processed, regardless its result. The `status` value might be different based on the result of the request.  
+
+| reason                                                                                         | status code |
+|------------------------------------------------------------------------------------------------|:-----------:|
+| **Test hash was used.**                                                                        |     200     |
+| **Run out of request quota for current billing period, upgrade your subscription to resolve!** |     402     |
+| **Active exception found for this hash in your account.**                                      |     200     |
+| **Temporary e-mail was used.**                                                                 |     204     |
+| **Mailbox does not exist.**                                                                    |     204     |
+| **No Signals were found.**                                                                     |     404     |
+| **Total rate did not meet the minimum threshold set.**                                         |     200     |
+| **Signals found, checks passed.**                                                              |     200     |
+| **User opted out of the processing of their personal data.**                                   |     451     |
+
+#### Required parameters
+
+For basic verification, `email` and `threshold` are mandatory, while for extended verification, all parameters are required.
+
+| parameter        |  e-mail only  | multiple parameters |
+|------------------|:-------------:|:-------------------:|
+| **email**        |       ✅       |         ✅         |
+| **threshold**    |       ✅       |         ✅         |
+| **phoneNumber**  |       ❌       |         ✅         |
+| **countryCode**  |       ❌       |         ✅         |
+| **postalCode**   |       ❌       |         ✅         |
+| **addressLine**  |       ❌       |         ✅         |
+
+#### Display results
+If you would like to display these values, use the numeric `reputation` and/or `good` and `bad` values. Avoid aliasing these values with phrases, as they might mislead users.
  
 > #### Examples of using the API responses in a UI:
 > 
