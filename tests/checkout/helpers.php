@@ -30,9 +30,11 @@ function uvbTestPublicHooks() {
     foreach ($GLOBALS['wp_filter'] as $hook => $filter) {
         foreach ($filter->callbacks as $priority => $callbacks) {
             foreach ($callbacks as $callback) {
-                if (is_array($callback['function']) && $callback['function'][0] instanceof UVBConnectorWooCommerce_Public) {
-                    remove_filter($hook, $callback['function'], $priority);
+                if (!is_array($callback['function']) || !$callback['function'][0] instanceof UVBConnectorWooCommerce_Public) {
+                    continue;
                 }
+
+                remove_filter($hook, $callback['function'], $priority);
             }
         }
     }
@@ -68,9 +70,11 @@ function uvbTestAddress(): array {
 function uvbTestSetCustomerAddresses(array $billing): void {
     foreach ($billing as $field => $value) {
         WC()->customer->{'set_billing_' . $field}($value);
-        if (is_callable([WC()->customer, 'set_shipping_' . $field])) {
-            WC()->customer->{'set_shipping_' . $field}($value);
+        if (!is_callable([WC()->customer, 'set_shipping_' . $field])) {
+            continue;
         }
+
+        WC()->customer->{'set_shipping_' . $field}($value);
     }
 }
 
@@ -229,10 +233,12 @@ function uvbTestFrontendCheck(string $route, array $data): void {
         // The extension callback and gateway filter share one plugin instance in Store API requests.
         foreach ($GLOBALS['wp_filter']['woocommerce_available_payment_gateways']->callbacks as $callbacks) {
             foreach ($callbacks as $callback) {
-                if (is_array($callback['function']) && $callback['function'][0] instanceof UVBConnectorWooCommerce_Public) {
-                    $callback['function'][0]->checkBlocksCustomer($data);
-                    return;
+                if (!is_array($callback['function']) || !$callback['function'][0] instanceof UVBConnectorWooCommerce_Public) {
+                    continue;
                 }
+
+                $callback['function'][0]->checkBlocksCustomer($data);
+                return;
             }
         }
         throw new RuntimeException('Missing checkout gateway filter');

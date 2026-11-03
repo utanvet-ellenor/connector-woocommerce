@@ -13,7 +13,11 @@ class UVBTestLegacyCustomerOrder {
     }
 
     public function get_address(string $type): array {
-        return $type === 'shipping' ? $this->shipping : $this->billing;
+        if ($type === 'shipping') {
+            return $this->shipping;
+        }
+
+        return $this->billing;
     }
 
     public function get_meta(): string {

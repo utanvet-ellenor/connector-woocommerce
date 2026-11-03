@@ -77,17 +77,22 @@ class UVBConnectorWooCommerce_Admin {
     public static function writeFlagToDb($orderId, $flagValue)
     {
         $order = wc_get_order($orderId);
-        if ($order) {
-            UVBConnectorWooCommerce_Order_Result::writeLegacyReason($order, $flagValue);
-            $order->save_meta_data();
+        if (!$order) {
+            return;
         }
+
+        UVBConnectorWooCommerce_Order_Result::writeLegacyReason($order, $flagValue);
+        $order->save_meta_data();
     }
 
     public static function getFlagFromDb($orderId)
     {
         $order = wc_get_order($orderId);
+        if (!$order) {
+            return '';
+        }
 
-        return $order ? UVBConnectorWooCommerce_Order_Result::getReason($order) : '';
+        return UVBConnectorWooCommerce_Order_Result::getReason($order);
     }
 
     public static function getFlagLevel(string $flag) : string

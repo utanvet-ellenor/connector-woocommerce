@@ -43,18 +43,20 @@ class UVBCheckoutTestFixture {
         $this->cod = new UVBTestGateway('cod');
         WC()->payment_gateways()->payment_gateways = [$this->bacs, $this->cod, new UVBTestGateway('card')];
 
-        if ($withCart) {
-            // A virtual product exercises native checkout without configuring shipping methods.
-            $this->product = new WC_Product_Simple();
-            $this->product->set_name('Synthetic checkout regression');
-            $this->product->set_status('publish');
-            $this->product->set_catalog_visibility('hidden');
-            $this->product->set_virtual(true);
-            $this->product->set_regular_price('10');
-            $this->product->save();
-            WC()->cart->add_to_cart($this->product->get_id());
-            WC()->cart->calculate_totals();
+        if (!$withCart) {
+            return;
         }
+
+        // A virtual product exercises native checkout without configuring shipping methods.
+        $this->product = new WC_Product_Simple();
+        $this->product->set_name('Synthetic checkout regression');
+        $this->product->set_status('publish');
+        $this->product->set_catalog_visibility('hidden');
+        $this->product->set_virtual(true);
+        $this->product->set_regular_price('10');
+        $this->product->save();
+        WC()->cart->add_to_cart($this->product->get_id());
+        WC()->cart->calculate_totals();
     }
 
     public function record(string $name, bool $passed, $details = null): void {
@@ -62,9 +64,11 @@ class UVBCheckoutTestFixture {
     }
 
     public function trackTransient(string $key): void {
-        if (strpos($key, UVBConnectorWooCommerce_Checkout_Result_Cache::TRANSIENT_PREFIX) === 0) {
-            $this->transientKeys[$key] = true;
+        if (strpos($key, UVBConnectorWooCommerce_Checkout_Result_Cache::TRANSIENT_PREFIX) !== 0) {
+            return;
         }
+
+        $this->transientKeys[$key] = true;
     }
 
     public function tearDown(): void {
@@ -72,10 +76,12 @@ class UVBCheckoutTestFixture {
             WC()->cart->empty_cart();
             foreach ($GLOBALS['uvbTestOrders'] as $orderId) {
                 $order = wc_get_order($orderId);
-                if ($order) {
-                    wc_maybe_increase_stock_levels($orderId);
-                    $order->delete(true);
+                if (!$order) {
+                    continue;
                 }
+
+                wc_maybe_increase_stock_levels($orderId);
+                $order->delete(true);
             }
             if ($this->product) {
                 $this->product->delete(true);

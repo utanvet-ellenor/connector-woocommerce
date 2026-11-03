@@ -152,9 +152,11 @@ class UVBConnectorWooCommerce_Settings
 
         _e('<p><em>Depending on this setting the plugin will use the production or sandbox environment of ProteCOD. <strong>Please make sure this is set up correctly.</strong></em></p>', 'uvb-connector-woocommerce');
 
-        if ($sandboxMode) {
-            _e('<p><span style="background: linear-gradient(to bottom right, #d20087, #79098f, #0c024a); color: white; font-weight: bold; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 4px;">SANDBOX</span></p>');
+        if (!$sandboxMode) {
+            return;
         }
+
+        _e('<p><span style="background: linear-gradient(to bottom right, #d20087, #79098f, #0c024a); color: white; font-weight: bold; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 4px;">SANDBOX</span></p>');
     }
 
     public function publicApiKeyCallback()

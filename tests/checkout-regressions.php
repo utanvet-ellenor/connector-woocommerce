@@ -28,7 +28,11 @@ namespace {
         add_filter('pre_transient_uvb_connector_api_log_' . hash('sha256', 'order_flag:' . $reason), '__return_true');
     }
     add_filter('woocommerce_logger_log_message', function($message, $level, $context) {
-        return ($context['source'] ?? '') === 'uvb-connector-woocommerce' ? null : $message;
+        if (($context['source'] ?? '') === 'uvb-connector-woocommerce') {
+            return null;
+        }
+
+        return $message;
     }, 10, 3);
     add_filter('option_uvb_connector_woocommerce_options', function($options) {
         $options['payment_methods_to_hide'] = ['cod'];

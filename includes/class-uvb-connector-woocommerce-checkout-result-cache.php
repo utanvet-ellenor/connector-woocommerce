@@ -91,10 +91,12 @@ class UVBConnectorWooCommerce_Checkout_Result_Cache {
 
     private function readCustomerResult($sessionKey, $requestKey, array $data): ?array {
         $result = $this->getResult($sessionKey, $requestKey);
-        if ($result !== null) {
-            // The exact request key also binds cache entries created before fingerprints existed.
-            $result['customer_fingerprint'] = UVBConnectorWooCommerce_Customer_Data::getFingerprint($data);
+        if ($result === null) {
+            return null;
         }
+
+        // The exact request key also binds cache entries created before fingerprints existed.
+        $result['customer_fingerprint'] = UVBConnectorWooCommerce_Customer_Data::getFingerprint($data);
 
         return $result;
     }
@@ -155,9 +157,11 @@ class UVBConnectorWooCommerce_Checkout_Result_Cache {
     }
 
     public function clearResult($sessionKey): void {
-        if ($sessionKey) {
-            delete_transient($sessionKey . '_result');
-            delete_transient($sessionKey);
+        if (!$sessionKey) {
+            return;
         }
+
+        delete_transient($sessionKey . '_result');
+        delete_transient($sessionKey);
     }
 }

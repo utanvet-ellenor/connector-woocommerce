@@ -181,9 +181,11 @@ class UVBConnectorWooCommerce_Public {
         // Cart address updates are partial patches; their customer object contains the merged data.
         $isCheckoutRequest = method_exists($request, 'get_route')
             && preg_match('#^/wc/store(?:/v[0-9]+)?/checkout/?$#', $request->get_route());
-        return $isCheckoutRequest
-            ? UVBConnectorWooCommerce_Customer_Data::fromAddresses($shipping, $billing)
-            : UVBConnectorWooCommerce_Customer_Data::fromAddresses($object->get_shipping(), $object->get_billing());
+        if ($isCheckoutRequest) {
+            return UVBConnectorWooCommerce_Customer_Data::fromAddresses($shipping, $billing);
+        }
+
+        return UVBConnectorWooCommerce_Customer_Data::fromAddresses($object->get_shipping(), $object->get_billing());
     }
 
     private function recordShippingPhonePresence($order, bool $provided): void {
@@ -262,8 +264,11 @@ class UVBConnectorWooCommerce_Public {
         $options = get_option('uvb_connector_woocommerce_options');
         $options = is_array($options) ? $options : [];
         $paymentMethods = $options[$optionName] ?? [];
+        if (!is_array($paymentMethods)) {
+            return [];
+        }
 
-        return is_array($paymentMethods) ? $paymentMethods : [];
+        return $paymentMethods;
     }
 
     public function checkInUVBService($email, $countryCode = '', $postalCode = '', $phoneNumber = '', $addressLine = '') {
@@ -287,9 +292,11 @@ class UVBConnectorWooCommerce_Public {
     private function excludePaymentMethods(array $gateways, string $optionName): array {
         $paymentMethods = $this->getPaymentMethods($optionName);
         foreach (array_keys($gateways) as $paymentMethod) {
-            if (in_array($paymentMethod, $paymentMethods)) {
-                unset($gateways[$paymentMethod]);
+            if (!in_array($paymentMethod, $paymentMethods)) {
+                continue;
             }
+
+            unset($gateways[$paymentMethod]);
         }
 
         return $gateways;
@@ -309,9 +316,11 @@ class UVBConnectorWooCommerce_Public {
             // Store API persists the decision in its order-update hook, after accepting the addresses.
             $result = $this->getPayOrderResult($payOrder, $this->paymentOrder === null);
             // An unknown legacy result must not expose a protected payment method.
-            return $result !== null && $result['blocked'] === false
-                ? $this->hideFallbackPaymentMethod($available_gateways)
-                : $this->removePaymentMethods($available_gateways);
+            if ($result === null || $result['blocked'] !== false) {
+                return $this->removePaymentMethods($available_gateways);
+            }
+
+            return $this->hideFallbackPaymentMethod($available_gateways);
         }
 
         $resumedOrder = $this->getResumableCheckoutOrder();
@@ -325,10 +334,11 @@ class UVBConnectorWooCommerce_Public {
             $result = $this->checkoutResultCache->getCurrentResult($this->getSessionBlockedStateKey());
         }
         $blocked = $this->checkoutDecision ?? $this->resultResolver->getBlockedDecision($result, $resumedOrder);
+        if ($blocked) {
+            return $this->removePaymentMethods($available_gateways);
+        }
 
-        return $blocked
-            ? $this->removePaymentMethods($available_gateways)
-            : $this->hideFallbackPaymentMethod($available_gateways);
+        return $this->hideFallbackPaymentMethod($available_gateways);
     }
 
     private function getResumableCheckoutOrder() {
@@ -373,9 +383,11 @@ class UVBConnectorWooCommerce_Public {
         }
 
         $data = UVBConnectorWooCommerce_Customer_Data::fromOrder($order);
-        if (UVBConnectorWooCommerce_Order_Result::writeCheckoutResult($order, $result, $data)) {
-            $order->save_meta_data();
+        if (!UVBConnectorWooCommerce_Order_Result::writeCheckoutResult($order, $result, $data)) {
+            return $result;
         }
+
+        $order->save_meta_data();
 
         return $result;
     }

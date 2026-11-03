@@ -1370,9 +1370,11 @@ function uvbTestSettingsHooks(UVBCheckoutTestFixture $fixture): void {
     foreach (['admin_menu', 'admin_init'] as $hook) {
         foreach ($GLOBALS['wp_filter'][$hook]->callbacks as $registered) {
             foreach ($registered as $callback) {
-                if (is_array($callback['function']) && $callback['function'][0] instanceof UVBConnectorWooCommerce_Settings) {
-                    $callbacks[$hook][] = $callback['function'];
+                if (!is_array($callback['function']) || !$callback['function'][0] instanceof UVBConnectorWooCommerce_Settings) {
+                    continue;
                 }
+
+                $callbacks[$hook][] = $callback['function'];
             }
         }
     }

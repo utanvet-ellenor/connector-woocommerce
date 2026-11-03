@@ -12,9 +12,11 @@ class UVBConnectorWooCommerce_Result_Resolver {
 
     public function findCheckoutResult($order, array $data): ?array {
         $result = UVBConnectorWooCommerce_Order_Result::readMatching($order, $data) ?? $this->checkoutResult;
+        if ($result !== null && UVBConnectorWooCommerce_Check_Result::matchesCustomerData($result, $data)) {
+            return $result;
+        }
 
-        return $result !== null && UVBConnectorWooCommerce_Check_Result::matchesCustomerData($result, $data)
-            ? $result : $this->findCachedResult($data);
+        return $this->findCachedResult($data);
     }
 
     public function checkCheckoutCustomer($order, array $data, $cartToken = '', bool $allowRequestCartToken = false): ?array {
@@ -33,11 +35,13 @@ class UVBConnectorWooCommerce_Result_Resolver {
         }
 
         $resultKey = $order->get_id() . ':' . UVBConnectorWooCommerce_Customer_Data::getFingerprint($data);
-        if (!array_key_exists($resultKey, $this->payOrderResults)) {
-            // Remember failures within this request as well: gateway filtering may run repeatedly.
-            $this->payOrderResults[$resultKey] = $this->findCachedResult($data)
-                ?? $this->checkCustomer($data, 'order:' . $order->get_id(), true);
+        if (array_key_exists($resultKey, $this->payOrderResults)) {
+            return $this->payOrderResults[$resultKey];
         }
+
+        // Remember failures within this request as well: gateway filtering may run repeatedly.
+        $this->payOrderResults[$resultKey] = $this->findCachedResult($data)
+            ?? $this->checkCustomer($data, 'order:' . $order->get_id(), true);
 
         return $this->payOrderResults[$resultKey];
     }
@@ -48,8 +52,12 @@ class UVBConnectorWooCommerce_Result_Resolver {
         }
 
         // An earlier decision for unverified or different data cannot authorize this attempt.
-        return UVBConnectorWooCommerce_Order_Result::canReuseSavedResult($order)
-            && UVBConnectorWooCommerce_Order_Result::read($order) !== null ? true : null;
+        if (UVBConnectorWooCommerce_Order_Result::canReuseSavedResult($order)
+            && UVBConnectorWooCommerce_Order_Result::read($order) !== null) {
+            return true;
+        }
+
+        return null;
     }
 
     private function findCachedResult(array $data): ?array {

@@ -42,9 +42,11 @@ class UVBConnectorWooCommerce_Customer_Data {
         $billing = [];
         foreach (['email', 'country', 'postcode', 'phone', 'address_1', 'address_2'] as $field) {
             $billing[$field] = $data['billing_' . $field] ?? null;
-            if (!empty($data['ship_to_different_address'])) {
-                $shipping[$field] = $data['shipping_' . $field] ?? null;
+            if (empty($data['ship_to_different_address'])) {
+                continue;
             }
+
+            $shipping[$field] = $data['shipping_' . $field] ?? null;
         }
 
         return self::fromAddresses($shipping, $billing);

@@ -56,11 +56,11 @@
                 fallback = element;
             }
 
-            if (isUsableElement(element)) {
-                if (!firstUsable) {
-                    firstUsable = element;
-                }
+            if (!isUsableElement(element) || firstUsable) {
+                continue;
             }
+
+            firstUsable = element;
         }
 
         return firstUsable || fallback;
@@ -68,7 +68,11 @@
 
     function getFieldValue(selectors) {
         var element = getPrimaryFieldElement(selectors);
-        return element ? getElementValue(element) : '';
+        if (!element) {
+            return '';
+        }
+
+        return getElementValue(element);
     }
 
     var shippingPhoneSelectors = ['input[name=shipping_phone]', '#shipping_phone', '#shipping-phone'];
@@ -233,20 +237,22 @@
     }
 
     function isCompletePayload(payload) {
+        if (!payload.email) {
+            return false;
+        }
+
         var phoneSelectors = SELECTORS.phone;
         if (usesBlocks) {
             var cart = getBlocksCart().getCartData();
             phoneSelectors = cart.shippingAddress && cart.shippingAddress.phone != null ? shippingPhoneSelectors : billingPhoneSelectors;
         }
         var emailElement = getPrimaryFieldElement(SELECTORS.email);
-        var isEmailValid = !!payload.email;
+        var isEmailValid;
 
-        if (isEmailValid) {
-            if (!usesBlocks && emailElement && typeof emailElement.checkValidity === 'function' && (emailElement.type || '').toLowerCase() === 'email') {
-                isEmailValid = emailElement.checkValidity();
-            } else {
-                isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email);
-            }
+        if (!usesBlocks && emailElement && typeof emailElement.checkValidity === 'function' && (emailElement.type || '').toLowerCase() === 'email') {
+            isEmailValid = emailElement.checkValidity();
+        } else {
+            isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email);
         }
 
         return !!(
@@ -288,9 +294,11 @@
                 console.log(ajax_object.checked_message);
             }
         ).fail(function() {
-            if (lastSentPayload === payloadKey) {
-                lastSentPayload = null;
+            if (lastSentPayload !== payloadKey) {
+                return;
             }
+
+            lastSentPayload = null;
         });
     }
 
@@ -424,10 +432,12 @@
             pollerCount += 1;
             scheduleCheck(true);
 
-            if (pollerCount >= maxPolls) {
-                clearInterval(pollerTimer);
-                pollerTimer = null;
+            if (pollerCount < maxPolls) {
+                return;
             }
+
+            clearInterval(pollerTimer);
+            pollerTimer = null;
         }, pollIntervalMs);
 
         scheduleCheck(true);

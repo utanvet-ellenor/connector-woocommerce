@@ -28,15 +28,18 @@ class UVBConnectorWooCommerce_Order_Result {
         }
 
         $result = self::read($order);
+        if ($result === null || !UVBConnectorWooCommerce_Check_Result::matchesCustomerData($result, $data)) {
+            return null;
+        }
 
-        return $result !== null && UVBConnectorWooCommerce_Check_Result::matchesCustomerData($result, $data) ? $result : null;
+        return $result;
     }
 
     public static function writeCheckoutResult($order, ?array $result, array $checkedData): bool {
+        if ($result === null && !$order->has_status('checkout-draft')) {
+            return false;
+        }
         if ($result === null) {
-            if (!$order->has_status('checkout-draft')) {
-                return false;
-            }
             // A draft's obsolete result must not become the placed order's decision on API failure.
             self::write($order, null);
             return true;
@@ -44,12 +47,10 @@ class UVBConnectorWooCommerce_Order_Result {
 
         $orderData = UVBConnectorWooCommerce_Customer_Data::fromOrder($order);
         $savedResult = self::readMatching($order, $checkedData);
-        if ($savedResult !== null) {
-            if (UVBConnectorWooCommerce_Check_Result::matchesOrderData($savedResult, $orderData)) {
-                return false;
-            }
-            $result = $savedResult;
+        if ($savedResult !== null && UVBConnectorWooCommerce_Check_Result::matchesOrderData($savedResult, $orderData)) {
+            return false;
         }
+        $result = $savedResult ?? $result;
 
         $result['customer_fingerprint'] = UVBConnectorWooCommerce_Customer_Data::getFingerprint($checkedData);
         // WooCommerce may persist billing as shipping for a virtual cart. Bind that
@@ -85,9 +86,11 @@ class UVBConnectorWooCommerce_Order_Result {
         ]);
 
         $reason = $result['reason'] ?? null;
-        if (!$keepLegacyReason && is_string($reason) && $reason !== '') {
-            self::writeLegacyReason($order, $reason);
+        if ($keepLegacyReason || !is_string($reason) || $reason === '') {
+            return;
         }
+
+        self::writeLegacyReason($order, $reason);
     }
 
     public static function writeLegacyReason($order, $reason): void {
