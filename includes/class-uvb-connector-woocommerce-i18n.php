@@ -30,7 +30,7 @@ class UVBConnectorWooCommerce_i18n {
 	 *
 	 * @since    1.0.0
 	 */
-	public function load_plugin_textdomain() {
+	public function loadPluginTextdomain() {
 
 		load_plugin_textdomain(
 			'uvb-connector-woocommerce',

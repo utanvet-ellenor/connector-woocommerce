@@ -15,14 +15,12 @@ class UVBConnectorWooCommerce_Settings
         if (!is_array($this->options)) {
             $this->options = [];
         }
-        add_action( 'admin_menu', array( $this, 'add_plugin_page' ) );
-        add_action( 'admin_init', array( $this, 'page_init' ) );
     }
 
     /**
      * Add options page
      */
-    public function add_plugin_page()
+    public function addPluginPage()
     {
         // This page will be under "Settings"
         add_options_page(
@@ -30,14 +28,14 @@ class UVBConnectorWooCommerce_Settings
             __('ProteCOD', 'uvb-connector-woocommerce'),
             'manage_options',
             'uvb-connector-woocommerce.php',
-            array( $this, 'create_admin_page' )
+            array( $this, 'createAdminPage' )
         );
     }
 
     /**
      * Options page callback
      */
-    public function create_admin_page()
+    public function createAdminPage()
     {
         // Set class property
         $this->options = get_option( 'uvb_connector_woocommerce_options' );
@@ -62,7 +60,7 @@ class UVBConnectorWooCommerce_Settings
     /**
      * Register and add settings
      */
-    public function page_init()
+    public function pageInit()
     {
         register_setting(
             'uvb_connector_woocommerce_group', // Option group
@@ -73,14 +71,14 @@ class UVBConnectorWooCommerce_Settings
         add_settings_section(
             'uvb_connector_woocommerce_section_id', // ID
             __('API settings', 'uvb-connector-woocommerce'), // Title
-            array( $this, 'print_section_info' ), // Callback
+            array( $this, 'printSectionInfo' ), // Callback
             'uvb-connector-woocommerce-admin' // Page
         );
 
         add_settings_field(
             'sandbox_mode',
             __('Sandbox mode', 'uvb-connector-woocommerce'),
-            array( $this, 'sandbox_mode_callback' ),
+            array( $this, 'sandboxModeCallback' ),
             'uvb-connector-woocommerce-admin',
             'uvb_connector_woocommerce_section_id'
         );
@@ -88,7 +86,7 @@ class UVBConnectorWooCommerce_Settings
         add_settings_field(
             'public_api_key', // ID
             __('Public API Key', 'uvb-connector-woocommerce'), // Title
-            array( $this, 'public_api_key_callback' ), // Callback
+            array( $this, 'publicApiKeyCallback' ), // Callback
             'uvb-connector-woocommerce-admin', // Page
             'uvb_connector_woocommerce_section_id' // Section
         );
@@ -96,7 +94,7 @@ class UVBConnectorWooCommerce_Settings
         add_settings_field(
             'private_api_key',
             __('Private API Key', 'uvb-connector-woocommerce'),
-            array( $this, 'private_api_key_callback' ),
+            array( $this, 'privateApiKeyCallback' ),
             'uvb-connector-woocommerce-admin',
             'uvb_connector_woocommerce_section_id'
         );
@@ -104,7 +102,7 @@ class UVBConnectorWooCommerce_Settings
         add_settings_field(
             'reputation_threshold',
             __('Reputation threshold', 'uvb-connector-woocommerce'),
-            array( $this, 'reputation_threshold_callback' ),
+            array( $this, 'reputationThresholdCallback' ),
             'uvb-connector-woocommerce-admin',
             'uvb_connector_woocommerce_section_id'
         );
@@ -112,7 +110,7 @@ class UVBConnectorWooCommerce_Settings
         add_settings_field(
             'payment_methods_to_hide',
             __('Payment methods to hide', 'uvb-connector-woocommerce'),
-            array( $this, 'payment_methods_to_hide_callback' ),
+            array( $this, 'paymentMethodsToHideCallback' ),
             'uvb-connector-woocommerce-admin',
             'uvb_connector_woocommerce_section_id'
         );
@@ -120,7 +118,7 @@ class UVBConnectorWooCommerce_Settings
         add_settings_field(
             'fallback_payment_methods',
             __('Fallback payment methods', 'uvb-connector-woocommerce'),
-            array( $this, 'fallback_payment_methods_callback' ),
+            array( $this, 'fallbackPaymentMethodsCallback' ),
             'uvb-connector-woocommerce-admin',
             'uvb_connector_woocommerce_section_id'
         );
@@ -161,7 +159,7 @@ class UVBConnectorWooCommerce_Settings
     /**
      * Print the Section text
      */
-    public function print_section_info()
+    public function printSectionInfo()
     {
         _e('Enter your API keys and set your preferences. ', 'uvb-connector-woocommerce');
     }
@@ -169,7 +167,7 @@ class UVBConnectorWooCommerce_Settings
     /**
      * Get the settings option array and print one of its values
      */
-    public function sandbox_mode_callback()
+    public function sandboxModeCallback()
     {
         $sandboxMode = isset($this->options['sandbox_mode']) ? $this->options['sandbox_mode'] : false;
 
@@ -189,7 +187,7 @@ class UVBConnectorWooCommerce_Settings
     /**
      * Get the settings option array and print one of its values
      */
-    public function public_api_key_callback()
+    public function publicApiKeyCallback()
     {
         printf(
             '<input type="text" id="public_api_key" name="uvb_connector_woocommerce_options[public_api_key]" value="%s" />',
@@ -200,7 +198,7 @@ class UVBConnectorWooCommerce_Settings
     /**
      * Get the settings option array and print one of its values
      */
-    public function private_api_key_callback()
+    public function privateApiKeyCallback()
     {
         printf(
             '<input type="text" id="private_api_key" name="uvb_connector_woocommerce_options[private_api_key]" value="%s" />',
@@ -211,7 +209,7 @@ class UVBConnectorWooCommerce_Settings
     /**
      * Get the settings option array and print one of its values
      */
-    public function reputation_threshold_callback()
+    public function reputationThresholdCallback()
     {
         printf(
             '<input type="number" max="1" step="0.0001" id="reputation_threshold" name="uvb_connector_woocommerce_options[reputation_threshold]" value="%s" />',
@@ -224,50 +222,25 @@ class UVBConnectorWooCommerce_Settings
     /**
      * Get the settings option array and print one of its values
      */
-    public function payment_methods_to_hide_callback()
+    public function paymentMethodsToHideCallback()
     {
-        $values = $this->options['payment_methods_to_hide'] ?? [];
-        $options = WC()->payment_gateways()->payment_gateways() ?? [];
-
-        if (!count($options)) {
-            echo 'No payment methods installed yet.';
-            return;
-        }
-
-        $html = '<fieldset>';
-
-        foreach ($options as $option) {
-            $for = "payment_methods_to_hide_$option->id";
-            $escapedFor = esc_attr($for);
-            $escapedId = esc_attr($option->id);
-            $escapedTitle = esc_html($option->title);
-            $html .= "<label for='$escapedFor'>";
-
-            $html .= "<input 
-              name='uvb_connector_woocommerce_options[payment_methods_to_hide][]' 
-              id='$escapedFor'
-              type='checkbox' 
-              value='$escapedId'";
-
-            if (in_array($option->id, $values)) {
-              $html .= "checked";
-            }
-
-            $html .= "/>";
-
-            $html .= $escapedTitle;
-            $html .= "</label><br/>";
-        }
-
-        $html .= '<p><em>' . __('These payment methods are hidden if the customer has failed the check.', 'uvb-connector-woocommerce') . '</em></p>';
-        $html .= '</fieldset>';
-
-        echo $html;
+        $this->renderPaymentMethods(
+            'payment_methods_to_hide',
+            __('These payment methods are hidden if the customer has failed the check.', 'uvb-connector-woocommerce')
+        );
     }
 
-    public function fallback_payment_methods_callback()
+    public function fallbackPaymentMethodsCallback()
     {
-        $values = $this->options['fallback_payment_methods'] ?? [];
+        $this->renderPaymentMethods(
+            'fallback_payment_methods',
+            __('These payment methods are shown only if the customer has failed the check.', 'uvb-connector-woocommerce')
+        );
+    }
+
+    private function renderPaymentMethods(string $optionName, string $description): void
+    {
+        $values = $this->options[$optionName] ?? [];
         $options = WC()->payment_gateways()->payment_gateways() ?? [];
 
         if (!count($options)) {
@@ -278,14 +251,15 @@ class UVBConnectorWooCommerce_Settings
         $html = '<fieldset>';
 
         foreach ($options as $option) {
-            $for = "fallback_payment_methods_$option->id";
+            $for = $optionName . '_' . $option->id;
             $escapedFor = esc_attr($for);
+            $escapedName = esc_attr('uvb_connector_woocommerce_options[' . $optionName . '][]');
             $escapedId = esc_attr($option->id);
             $escapedTitle = esc_html($option->title);
             $html .= "<label for='$escapedFor'>";
 
             $html .= "<input 
-              name='uvb_connector_woocommerce_options[fallback_payment_methods][]' 
+              name='$escapedName'
               id='$escapedFor'
               type='checkbox' 
               value='$escapedId'";
@@ -300,7 +274,7 @@ class UVBConnectorWooCommerce_Settings
             $html .= "</label><br/>";
         }
 
-        $html .= '<p><em>' . __('These payment methods are shown only if the customer has failed the check.', 'uvb-connector-woocommerce') . '</em></p>';
+        $html .= '<p><em>' . $description . '</em></p>';
         $html .= '</fieldset>';
 
         echo $html;

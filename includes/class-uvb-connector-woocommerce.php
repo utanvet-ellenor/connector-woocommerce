@@ -29,6 +29,8 @@
  */
 class UVBConnectorWooCommerce {
 
+    private ?UVBConnectorWooCommerce_Api $api = null;
+
 	/**
 	 * The loader that's responsible for maintaining and registering all hooks that power
 	 * the plugin.
@@ -74,11 +76,11 @@ class UVBConnectorWooCommerce {
 		}
 		$this->plugin_name = 'uvb-connector-woocommerce';
 
-		$this->load_dependencies();
-		$this->set_locale();
-		$this->define_uvb_flagged_email_hooks();
-		$this->define_admin_hooks();
-		$this->define_public_hooks();
+		$this->loadDependencies();
+		$this->setLocale();
+		$this->defineUvbFlaggedEmailHooks();
+		$this->defineAdminHooks();
+		$this->definePublicHooks();
 
 	}
 
@@ -98,7 +100,7 @@ class UVBConnectorWooCommerce {
 	 * @since    1.0.0
 	 * @access   private
 	 */
-	private function load_dependencies() {
+	private function loadDependencies() {
 
 		/**
 		 * The class responsible for orchestrating the actions and filters of the
@@ -106,6 +108,12 @@ class UVBConnectorWooCommerce {
 		 */
 		require_once plugin_dir_path( __DIR__ ) . 'includes/class-uvb-connector-woocommerce-loader.php';
 		require_once plugin_dir_path( __DIR__ ) . 'includes/class-uvb-connector-woocommerce-api-logger.php';
+		require_once plugin_dir_path( __DIR__ ) . 'includes/class-uvb-connector-woocommerce-check-result.php';
+		require_once plugin_dir_path( __DIR__ ) . 'includes/class-uvb-connector-woocommerce-api.php';
+		require_once plugin_dir_path( __DIR__ ) . 'includes/class-uvb-connector-woocommerce-checkout-result-cache.php';
+		require_once plugin_dir_path( __DIR__ ) . 'includes/class-uvb-connector-woocommerce-order-result.php';
+		require_once plugin_dir_path( __DIR__ ) . 'includes/class-uvb-connector-woocommerce-customer-data.php';
+		require_once plugin_dir_path( __DIR__ ) . 'includes/class-uvb-connector-woocommerce-result-resolver.php';
 
 		/**
 		 * The class responsible for defining internationalization functionality
@@ -138,10 +146,10 @@ class UVBConnectorWooCommerce {
 	 * @since    1.0.0
 	 * @access   private
 	 */
-	private function set_locale() {
+	private function setLocale() {
 		$plugin_i18n = new UVBConnectorWooCommerce_i18n();
 
-		$this->loader->add_action( 'plugins_loaded', $plugin_i18n, 'load_plugin_textdomain' );
+		$this->loader->addAction( 'plugins_loaded', $plugin_i18n, 'loadPluginTextdomain' );
 	}
 
 	/**
@@ -149,9 +157,9 @@ class UVBConnectorWooCommerce {
 	 *
 	 * @since 4.3.0
 	 */
-	private function define_uvb_flagged_email_hooks() {
-		$this->loader->add_filter( 'woocommerce_email_actions', $this, 'add_uvb_flagged_email_action' );
-		$this->loader->add_filter( 'woocommerce_email_classes', $this, 'add_uvb_flagged_email' );
+	private function defineUvbFlaggedEmailHooks() {
+		$this->loader->addFilter( 'woocommerce_email_actions', $this, 'addUvbFlaggedEmailAction' );
+		$this->loader->addFilter( 'woocommerce_email_classes', $this, 'addUvbFlaggedEmail' );
 	}
 
 	/**
@@ -161,7 +169,7 @@ class UVBConnectorWooCommerce {
 	 * @param array $email_actions WooCommerce transactional email actions.
 	 * @return array
 	 */
-	public function add_uvb_flagged_email_action( $email_actions ) {
+	public function addUvbFlaggedEmailAction( $email_actions ) {
 		$email_actions[] = 'woocommerce_order_status_uvb_flagged';
 
 		return $email_actions;
@@ -174,7 +182,7 @@ class UVBConnectorWooCommerce {
 	 * @param array $email_classes Registered WooCommerce email instances.
 	 * @return array
 	 */
-	public function add_uvb_flagged_email( $email_classes ) {
+	public function addUvbFlaggedEmail( $email_classes ) {
 		if ( ! class_exists( 'WC_Email' ) ) {
 			return $email_classes;
 		}
@@ -193,34 +201,35 @@ class UVBConnectorWooCommerce {
 	 * @since    1.0.0
 	 * @access   private
 	 */
-	private function define_admin_hooks() {
-		$plugin_admin = new UVBConnectorWooCommerce_Admin( $this->get_plugin_name(), $this->get_version() );
-		$plugin_settings = new UVBConnectorWooCommerce_Settings( $this->get_plugin_name(), $this->get_version() );
+	private function defineAdminHooks() {
+		$plugin_admin = new UVBConnectorWooCommerce_Admin( $this->getPluginName(), $this->getVersion(), $this->getApi() );
+		$plugin_settings = new UVBConnectorWooCommerce_Settings();
 
-		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
+		$this->loader->addAction( 'admin_enqueue_scripts', $plugin_admin, 'enqueueStyles' );
 
 		// Register order status for WooCommerce
-		$this->loader->add_action( 'init', $plugin_admin, 'registerOrderStatusFlagged');
-		$this->loader->add_action( 'wc_order_statuses', $plugin_admin, 'addOrderStatusFlagged');
+		$this->loader->addAction( 'init', $plugin_admin, 'registerOrderStatusFlagged');
+		$this->loader->addAction( 'wc_order_statuses', $plugin_admin, 'addOrderStatusFlagged');
 
 		// Add hooks to `completed` and `uvb_flagged` order statuses
-		$this->loader->add_action( 'woocommerce_order_status_completed', $plugin_admin, 'sendPlusToUVBService');
-		$this->loader->add_action( 'woocommerce_order_status_uvb_flagged', $plugin_admin, 'sendMinusToUVBService');
+		$this->loader->addAction( 'woocommerce_order_status_completed', $plugin_admin, 'sendPlusToUVBService');
+		$this->loader->addAction( 'woocommerce_order_status_uvb_flagged', $plugin_admin, 'sendMinusToUVBService');
 
 		// Add hooks needed for order flagging.
-		$this->loader->add_action( 'woocommerce_new_order', $plugin_admin, 'flagOrder');
-		$this->loader->add_action( 'manage_edit-shop_order_columns', $plugin_admin, 'addColumnFlagged');
-		$this->loader->add_action( 'manage_woocommerce_page_wc-orders_columns', $plugin_admin, 'addColumnFlagged');
-		$this->loader->add_action( 'manage_shop_order_posts_custom_column', $plugin_admin, 'showFlagNoticeInColumn', 5, 2);
-		$this->loader->add_action( 'manage_woocommerce_page_wc-orders_custom_column', $plugin_admin, 'showFlagNoticeInColumn', 5, 2);
+		$this->loader->addAction( 'woocommerce_new_order', $plugin_admin, 'flagOrder');
+		$this->loader->addAction( 'manage_edit-shop_order_columns', $plugin_admin, 'addColumnFlagged');
+		$this->loader->addAction( 'manage_woocommerce_page_wc-orders_columns', $plugin_admin, 'addColumnFlagged');
+		$this->loader->addAction( 'manage_shop_order_posts_custom_column', $plugin_admin, 'showFlagNoticeInColumn', 5, 2);
+		$this->loader->addAction( 'manage_woocommerce_page_wc-orders_custom_column', $plugin_admin, 'showFlagNoticeInColumn', 5, 2);
 
 		// Add hooks for bulk order status changes
-		$this->loader->add_filter('bulk_actions-edit-shop_order', $plugin_admin, 'addUvbActionsToBulkMenu');
-		$this->loader->add_filter('bulk_actions-woocommerce_page_wc-orders', $plugin_admin, 'addUvbActionsToBulkMenu');
-		$this->loader->add_action('handle_bulk_actions-edit-shop_order', $plugin_admin, 'catchUvbActionFromBulkMenu', 10, 3);
-		$this->loader->add_action('handle_bulk_actions-woocommerce_page_wc-orders', $plugin_admin, 'catchUvbActionFromBulkMenu', 10 , 3);
+		$this->loader->addFilter('bulk_actions-edit-shop_order', $plugin_admin, 'addUvbActionsToBulkMenu');
+		$this->loader->addFilter('bulk_actions-woocommerce_page_wc-orders', $plugin_admin, 'addUvbActionsToBulkMenu');
+		$this->loader->addAction('handle_bulk_actions-edit-shop_order', $plugin_admin, 'catchUvbActionFromBulkMenu', 10, 3);
+		$this->loader->addAction('handle_bulk_actions-woocommerce_page_wc-orders', $plugin_admin, 'catchUvbActionFromBulkMenu', 10 , 3);
 
-		$this->loader->add_action( 'admin_menu', $plugin_settings, 'add_plugin_page');
+		$this->loader->addAction( 'admin_menu', $plugin_settings, 'addPluginPage');
+		$this->loader->addAction( 'admin_init', $plugin_settings, 'pageInit');
 	}
 
 	/**
@@ -230,20 +239,27 @@ class UVBConnectorWooCommerce {
 	 * @since    1.0.0
 	 * @access   private
 	 */
-	private function define_public_hooks() {
-		$plugin_public = new UVBConnectorWooCommerce_Public( $this->get_plugin_name(), $this->get_version() );
+	private function definePublicHooks() {
+		$plugin_public = new UVBConnectorWooCommerce_Public( $this->getPluginName(), $this->getVersion(), $this->getApi() );
 
-		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
+		$this->loader->addAction( 'wp_enqueue_scripts', $plugin_public, 'enqueueScripts' );
+		$this->loader->addAction( 'woocommerce_blocks_loaded', $plugin_public, 'registerStoreApiUpdateCallback' );
 
-		$this->loader->add_action( 'wp_ajax_check_if_email_is_flagged', $plugin_public, 'check_if_email_is_flagged' );
-		$this->loader->add_action( 'wp_ajax_nopriv_check_if_email_is_flagged', $plugin_public, 'check_if_email_is_flagged' );
+		$this->loader->addAction( 'wp_ajax_check_if_email_is_flagged', $plugin_public, 'checkIfEmailIsFlagged' );
+		$this->loader->addAction( 'wp_ajax_nopriv_check_if_email_is_flagged', $plugin_public, 'checkIfEmailIsFlagged' );
 
-		$this->loader->add_action( 'woocommerce_available_payment_gateways', $plugin_public, 'update_available_payment_options' );
-		$this->loader->add_action( 'woocommerce_after_checkout_validation', $plugin_public, 'validate_selected_payment_method', 10, 2 );
-		$this->loader->add_action( 'woocommerce_store_api_cart_update_customer_from_request', $plugin_public, 'check_if_email_is_flagged_store_api', 10, 2 );
-		$this->loader->add_action( 'woocommerce_store_api_checkout_update_customer_from_request', $plugin_public, 'check_if_email_is_flagged_store_api', 10, 2 );
-		$this->loader->add_action( 'woocommerce_store_api_checkout_update_order_from_request', $plugin_public, 'check_if_email_is_flagged_store_api', 10, 2 );
+		$this->loader->addAction( 'woocommerce_available_payment_gateways', $plugin_public, 'updateAvailablePaymentOptions' );
+		$this->loader->addAction( 'woocommerce_checkout_update_order_review', $plugin_public, 'captureCheckoutData' );
+		$this->loader->addAction( 'woocommerce_after_checkout_validation', $plugin_public, 'validateSelectedPaymentMethod', 10, 2 );
+		$this->loader->addAction( 'woocommerce_checkout_create_order', $plugin_public, 'saveCheckoutReason', 10, 2 );
+		$this->loader->addAction( 'woocommerce_store_api_cart_update_customer_from_request', $plugin_public, 'checkIfEmailIsFlaggedStoreApi', 10, 2 );
+		$this->loader->addAction( 'woocommerce_store_api_checkout_update_customer_from_request', $plugin_public, 'checkIfEmailIsFlaggedStoreApi', 10, 2 );
+		$this->loader->addAction( 'woocommerce_store_api_checkout_update_order_from_request', $plugin_public, 'checkIfEmailIsFlaggedStoreApi', 10, 2 );
 	}
+
+    private function getApi(): UVBConnectorWooCommerce_Api {
+        return $this->api ??= new UVBConnectorWooCommerce_Api();
+    }
 
 	/**
 	 * Run the loader to execute all of the hooks with WordPress.
@@ -261,7 +277,7 @@ class UVBConnectorWooCommerce {
 	 * @since     1.0.0
 	 * @return    string    The name of the plugin.
 	 */
-	public function get_plugin_name() {
+	public function getPluginName() {
 		return $this->plugin_name;
 	}
 
@@ -271,7 +287,7 @@ class UVBConnectorWooCommerce {
 	 * @since     1.0.0
 	 * @return    UVBConnectorWooCommerce_Loader    Orchestrates the hooks of the plugin.
 	 */
-	public function get_loader() {
+	public function getLoader() {
 		return $this->loader;
 	}
 
@@ -281,7 +297,7 @@ class UVBConnectorWooCommerce {
 	 * @since     1.0.0
 	 * @return    string    The version number of the plugin.
 	 */
-	public function get_version() {
+	public function getVersion() {
 		return $this->version;
 	}
 

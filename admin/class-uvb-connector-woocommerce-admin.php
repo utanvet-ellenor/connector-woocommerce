@@ -2,7 +2,6 @@
 
 require UVB_CONNECTOR_VENDOR_AUTOLOAD_PATH;
 
-use UtanvetEllenor\Client;
 use UtanvetEllenor\Reasons;
 
 /**
@@ -44,10 +43,7 @@ class UVBConnectorWooCommerce_Admin {
      */
     private $version;
 
-    private $publicKey;
-    private $privateKey;
-    private $production;
-    private $threshold;
+    private $api;
 
     /**
      * Initialize the class and set its properties.
@@ -56,19 +52,11 @@ class UVBConnectorWooCommerce_Admin {
      * @param      string    $plugin_name       The name of this plugin.
      * @param      string    $version    The version of this plugin.
      */
-    public function __construct( $plugin_name, $version ) {
+    public function __construct( $plugin_name, $version, ?UVBConnectorWooCommerce_Api $api = null ) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
 
-        $options = get_option('uvb_connector_woocommerce_options');
-        if (!is_array($options)) {
-            $options = [];
-        }
-
-        $this->publicKey = $options['public_api_key'] ?? '';
-        $this->privateKey = $options['private_api_key'] ?? '';
-        $this->production = isset($options['sandbox_mode']) ? false : true;
-        $this->threshold = $options['reputation_threshold'] ?? 0.5;
+        $this->api = $api ?? new UVBConnectorWooCommerce_Api();
     }
 
     /**
@@ -76,7 +64,7 @@ class UVBConnectorWooCommerce_Admin {
      *
      * @since    1.0.0
      */
-    public function enqueue_styles() {
+    public function enqueueStyles() {
         wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/uvb-connector-woocommerce-admin.css', array(), $this->version, 'all' );
     }
 
@@ -118,65 +106,44 @@ class UVBConnectorWooCommerce_Admin {
 
     public function flagOrder($orderId)
     {
-        $order = new WC_Order($orderId);
-        $email = $order->get_billing_email();
-        if (!$email) {
+        $order = wc_get_order($orderId);
+        if (!$order || $order->has_status('checkout-draft')) {
             return;
         }
 
-        $client = new Client($this->publicKey, $this->privateKey);
-        $client->email = $email;
-        $client->countryCode = $order->get_shipping_country() ?: $order->get_billing_country();
-        $client->postalCode = $order->get_shipping_postcode() ?: $order->get_billing_postcode();
-        $client->phoneNumber = $order->get_shipping_phone() ?: $order->get_billing_phone();
-        $client->addressLine = $this->getOrderAddressLine($order);
-        $client->threshold = $this->threshold;
-        $client->sandbox = !$this->production;
-
-        try {
-            $response = $client->sendRequest();
-        } catch (\Throwable $exception) {
-            UVBConnectorWooCommerce_Api_Logger::logFailure('order_flag', 'exception', $exception);
+        // Checkout attaches its result before saving the order, including on retries.
+        if (in_array($order->get_created_via(), ['checkout', 'store-api'], true)) {
             return;
         }
 
-        if (!is_object($response) || !isset($response->result) || !is_object($response->result) || !isset($response->result->reason)) {
-            UVBConnectorWooCommerce_Api_Logger::logFailure(
-                'order_flag',
-                $response === null ? 'empty_response' : 'invalid_response'
-            );
+        $data = UVBConnectorWooCommerce_Customer_Data::fromOrder($order);
+        if (!$data['email']) {
             return;
         }
 
-        UVBConnectorWooCommerce_Api_Logger::logRecovery('order_flag');
-
-        $flagValue = $response->result->reason;
-        if (!$flagValue) {
+        $result = $this->api->check($data, 'order_flag');
+        if ($result === null) {
             return;
         }
 
-        self::writeFlagToDb($orderId, $flagValue);
+        UVBConnectorWooCommerce_Order_Result::write($order, $result);
+        $order->save_meta_data();
     }
 
     public static function writeFlagToDb($orderId, $flagValue)
     {
-        $metaKey = '_uvb_connector_woocommerce_flag';
-
-        if (self::isHposActive()) {
-            $order = wc_get_order($orderId);
-            $order->add_meta_data($metaKey, $flagValue);
-            $order->save();
-        } else {
-            update_post_meta($orderId, $metaKey, $flagValue);
+        $order = wc_get_order($orderId);
+        if ($order) {
+            UVBConnectorWooCommerce_Order_Result::writeLegacyReason($order, $flagValue);
+            $order->save_meta_data();
         }
     }
 
     public static function getFlagFromDb($orderId)
     {
-        $metaKey = '_uvb_connector_woocommerce_flag';
-        $value = self::isHposActive() ? wc_get_order($orderId)->get_meta($metaKey, true) : get_post_meta($orderId, $metaKey, true);
+        $order = wc_get_order($orderId);
 
-        return $value;
+        return $order ? UVBConnectorWooCommerce_Order_Result::getReason($order) : '';
     }
 
     public static function getFlagLevel(string $flag) : string
@@ -224,28 +191,35 @@ class UVBConnectorWooCommerce_Admin {
             return;
         }
 
-        $postId = self::isHposActive() ? json_decode($order)->id : $order;
-        $flag = self::getFlagFromDb($postId);
+        $flag = self::getFlagFromDb(self::isHposActive() ? json_decode($order)->id : $order);
         if (!$flag) {
             return;
         }
 
-        $level = self::getFlagLevel($flag);
         $label = self::getFlagLabel($flag);
-        $labelAttribute = esc_attr($label);
-        $labelText = esc_html($label);
 
-        if ('uvb_status' === $column) {
-            if ($level == 'error') {
-                echo '<div style="display: flex; align-items: start; font-weight: bold; font-size: 12px; line-height: 1.5; color: #db3535;" title="' . $labelAttribute . '"><svg xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; flex: none;" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z" clip-rule="evenodd" /></svg>'. $labelText . '</div>';
-            } elseif ($level == 'warning') {
-                echo '<div style="display: flex; align-items: start; font-weight: bold; font-size: 12px; line-height: 1.5; color: #c68c02;" title="' . $labelAttribute . '"><svg xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; flex: none;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>'. $labelText . '</div>';
-            } elseif ($level == 'success') {
-                echo '<div style="display: flex; align-items: start; font-weight: bold; font-size: 12px; line-height: 1.5; color: #2c9188;" title="' . $labelAttribute . '"><svg xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; flex: none;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>'. $labelText . '</div>';
-            } else {
-                echo '<div style="display: flex; align-items: start; font-weight: bold; font-size: 12px; line-height: 1.5; color: #777;" title="' . $labelAttribute . '"><svg xmlns="http://www.w3.org/2000/svg" fill="none" style="width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; flex: none;" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>'. $labelText . '</div>';
-            }
-        }
+        $appearances = [
+            'error' => [
+                'color' => '#db3535',
+                'icon' => '<svg xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; flex: none;" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z" clip-rule="evenodd" /></svg>',
+            ],
+            'warning' => [
+                'color' => '#c68c02',
+                'icon' => '<svg xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; flex: none;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>',
+            ],
+            'success' => [
+                'color' => '#2c9188',
+                'icon' => '<svg xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; flex: none;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>',
+            ],
+            'notice' => [
+                'color' => '#777',
+                'icon' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" style="width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; flex: none;" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>',
+            ],
+        ];
+        $appearance = $appearances[self::getFlagLevel($flag)] ?? $appearances['notice'];
+
+        echo '<div style="display: flex; align-items: start; font-weight: bold; font-size: 12px; line-height: 1.5; color: ' . $appearance['color'] . ';"'
+            . ' title="' . esc_attr($label) . '">' . $appearance['icon'] . esc_html($label) . '</div>';
     }
 
     /**
@@ -281,54 +255,12 @@ class UVBConnectorWooCommerce_Admin {
             wc_maybe_increase_stock_levels($order_id);
         }
 
-        $email = $order->get_billing_email();
-        if (!$email) {
+        $data = UVBConnectorWooCommerce_Customer_Data::fromOrder($order);
+        if (!$data['email']) {
             return null;
         }
 
-        $phoneNumber = $order->get_shipping_phone() ?: $order->get_billing_phone();
-        $countryCode = $order->get_shipping_country() ?: $order->get_billing_country();
-        $postalCode = $order->get_shipping_postcode() ?: $order->get_billing_postcode();
-        $addressLine = $this->getOrderAddressLine($order);
-
-        $client = new Client($this->publicKey, $this->privateKey);
-        $client->email = $email;
-        $client->orderId = $order_id;
-        $client->outcome = $outcome;
-        $client->countryCode = $countryCode;
-        $client->postalCode = $postalCode;
-        $client->phoneNumber = $phoneNumber;
-        $client->addressLine = $addressLine;
-
-        try {
-            $response = $client->sendSignal();
-        } catch (\Throwable $exception) {
-            UVBConnectorWooCommerce_Api_Logger::logFailure('signal', 'exception', $exception);
-            return null;
-        }
-
-        if (!is_object($response)) {
-            UVBConnectorWooCommerce_Api_Logger::logFailure('signal', 'empty_response');
-            return null;
-        }
-
-        UVBConnectorWooCommerce_Api_Logger::logRecovery('signal');
-
-        return $response;
-    }
-
-    private function getOrderAddressLine($order) {
-        $shippingAddressLine1 = $order->get_shipping_address_1();
-        $shippingAddressLine2 = $order->get_shipping_address_2();
-
-        if ($shippingAddressLine1 || $shippingAddressLine2) {
-            return implode(' ', array_filter([$shippingAddressLine1, $shippingAddressLine2]));
-        }
-
-        return implode(' ', array_filter([
-            $order->get_billing_address_1(),
-            $order->get_billing_address_2(),
-        ]));
+        return $this->api->sendSignal($data, $order_id, $outcome);
     }
 
     public function addUvbActionsToBulkMenu($actions)

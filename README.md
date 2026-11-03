@@ -33,6 +33,18 @@ The idea behind the service is the following:
   * The plugin sends the entered customer and delivery data to our service for verification.
   * The service returns a JSON response and if the customer reputation provided in this payload does not meet the minimum value set by the shop owner in the plugin settings (`Reputation threshold`), the plugin will disable the Cash on Delivery payment method.
 
+### Checkout results and payment retries
+
+Successful checks are cached for 30 minutes. Reusing a result does not extend its expiry, and placing an order does not delete it. Another order with the same customer data and settings in the same session can reuse the result during that period.
+
+Before an order is created, server-side checkout validation reuses a matching result or performs the check if none exists. The order stores the full API response, the payment restriction decision, and the check time in `_uvb_connector_woocommerce_check_result`, with `schema_version` set to `1`. The existing `_uvb_connector_woocommerce_flag` field still stores the reason for compatibility with older integrations.
+
+Draft orders use the current checkout result from the 30-minute cache or a new check. Their preliminary decision and reason are replaced when checkout saves the result; an unavailable check clears obsolete draft annotations.
+
+After an order is placed, payment retries use its saved decision even after the checkout cache expires. These orders retain their original reason. If an older order has no saved decision, a payment retry checks it and saves the result for subsequent attempts. Thank-you pages and empty carts do not start frontend checks.
+
+The saved result includes fingerprints of both the checked customer data and the order data at the time of saving. This lets an unchanged order reuse its decision when WooCommerce has replaced a virtual cart's shipping address with billing data. Checkout submissions still match against the checked customer data; later order changes do not update either fingerprint without a matching check.
+
 ### Customer notification
 
 When enabled, the plugin sends a WooCommerce email notification to the customer's billing email address when an order enters the `Rendelést nem vette át` status. The notification is disabled by default and can be enabled and customized under **WooCommerce > Settings > Emails > Át nem vett csomag**.

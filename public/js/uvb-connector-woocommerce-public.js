@@ -7,6 +7,10 @@
     var pollerCount = 0;
     var maxPolls = 20;
     var pollIntervalMs = 1000;
+    var usesBlocks = !!ajax_object.uses_blocks;
+    var blocksUnsubscribe = null;
+    var lastObservedBlocksState = null;
+    var blocksRequestPending = false;
 
     function isUsableElement(element) {
         if (!element) {
@@ -32,12 +36,20 @@
     function getPrimaryFieldElement(selectors) {
         var fallback = null;
         var firstUsable = null;
-        var firstWithValue = null;
+        var shippingToggle = document.querySelector('#ship-to-different-address-checkbox');
 
         for (var i = 0; i < selectors.length; i++) {
             var element = document.querySelector(selectors[i]);
             if (!element) {
                 continue;
+            }
+            var fieldName = element.name || element.id || '';
+            if (shippingToggle && !shippingToggle.checked && fieldName.indexOf('shipping_') === 0) {
+                continue;
+            }
+            // Country-specific fields and enhanced selects may be hidden but still submitted.
+            if (shippingToggle && shippingToggle.checked && fieldName.indexOf('shipping_') === 0 && !element.disabled) {
+                return element;
             }
 
             if (!fallback) {
@@ -48,14 +60,10 @@
                 if (!firstUsable) {
                     firstUsable = element;
                 }
-
-                if (!firstWithValue && getElementValue(element)) {
-                    firstWithValue = element;
-                }
             }
         }
 
-        return firstWithValue || firstUsable || fallback;
+        return firstUsable || fallback;
     }
 
     function getFieldValue(selectors) {
@@ -63,8 +71,13 @@
         return element ? getElementValue(element) : '';
     }
 
+    var shippingPhoneSelectors = ['input[name=shipping_phone]', '#shipping_phone', '#shipping-phone'];
+    var billingPhoneSelectors = ['input[name=billing_phone]', '#billing_phone', '#billing-phone', 'input[name=phone]', '#phone', 'input[name*=phone]', 'input[type=tel]'];
+
     var SELECTORS = {
         email: [
+            'input[name=shipping_email]',
+            '#shipping_email',
             'input[name=billing_email]',
             '#billing_email',
             '.woocommerce-checkout input#email',
@@ -72,16 +85,7 @@
             '#email',
             'input[name*=email]'
         ],
-        phone: [
-            'input[name=shipping_phone]',
-            '#shipping_phone',
-            'input[name=billing_phone]',
-            '#billing_phone',
-            'input[name=phone]',
-            '#phone',
-            'input[name*=phone]',
-            'input[type=tel]'
-        ],
+        phone: shippingPhoneSelectors.concat(billingPhoneSelectors),
         country: [
             'select[name=shipping_country]',
             'input[name=shipping_country]',
@@ -177,61 +181,68 @@
     }
 
     function buildPayload() {
-        var email = getFieldValue(SELECTORS.email);
-        var phoneNumber = getFieldValue(SELECTORS.phone);
-        var countryCode = getFieldValue(SELECTORS.country);
-        var postalCode = getFieldValue(SELECTORS.postal);
-        var addressLine1 = getFieldValue(SELECTORS.address1);
-        var addressLine2 = getFieldValue(SELECTORS.address2);
-        var addressLine = [addressLine1, addressLine2].filter(Boolean).join(' ').trim();
+        if (usesBlocks) {
+            return buildBlocksPayload();
+        }
 
         return {
-            email: email,
-            phone_number: phoneNumber,
-            country_code: countryCode,
-            postal_code: postalCode,
-            address_line: addressLine
+            email: getFieldValue(SELECTORS.email),
+            phone_number: getFieldValue(SELECTORS.phone),
+            country_code: getFieldValue(SELECTORS.country),
+            postal_code: getFieldValue(SELECTORS.postal),
+            address_line: [
+                getFieldValue(SELECTORS.address1),
+                getFieldValue(SELECTORS.address2)
+            ].filter(Boolean).join(' ').trim()
+        };
+    }
+
+    function getBlocksCart() {
+        return window.wp.data.select(window.wc.wcBlocksData.cartStore);
+    }
+
+    function buildBlocksPayload() {
+        var cart = getBlocksCart().getCartData();
+        var billing = cart.billingAddress || {};
+        var shipping = cart.shippingAddress || {};
+
+        // Match the Store API checkout hook so both paths share the same cache key.
+        return {
+            email: shipping.email ?? billing.email ?? '',
+            phone_number: shipping.phone ?? billing.phone ?? '',
+            country_code: shipping.country ?? billing.country ?? '',
+            postal_code: shipping.postcode ?? billing.postcode ?? '',
+            address_line: [
+                shipping.address_1 ?? billing.address_1 ?? '',
+                shipping.address_2 ?? billing.address_2 ?? ''
+            ].filter(Boolean).join(' ').trim()
         };
     }
 
     function isFieldRequired(selectors) {
-        for (var i = 0; i < selectors.length; i++) {
-            var element = document.querySelector(selectors[i]);
-            if (!element) {
-                continue;
-            }
-
-            if (element.required) {
-                return true;
-            }
-
-            if (element.getAttribute('required') !== null) {
-                return true;
-            }
-
-            if (element.getAttribute('aria-required') === 'true') {
-                return true;
-            }
-
-            if (element.getAttribute('data-required') === 'true') {
-                return true;
-            }
-
-            if (element.closest && element.closest('.validate-required')) {
-                return true;
-            }
+        var element = getPrimaryFieldElement(selectors);
+        if (!element) {
+            return false;
         }
 
-        return false;
+        return !!(element.required
+            || element.getAttribute('required') !== null
+            || element.getAttribute('aria-required') === 'true'
+            || element.getAttribute('data-required') === 'true'
+            || (element.closest && element.closest('.validate-required')));
     }
 
     function isCompletePayload(payload) {
-        var phoneRequired = isFieldRequired(SELECTORS.phone);
+        var phoneSelectors = SELECTORS.phone;
+        if (usesBlocks) {
+            var cart = getBlocksCart().getCartData();
+            phoneSelectors = cart.shippingAddress && cart.shippingAddress.phone != null ? shippingPhoneSelectors : billingPhoneSelectors;
+        }
         var emailElement = getPrimaryFieldElement(SELECTORS.email);
         var isEmailValid = !!payload.email;
 
         if (isEmailValid) {
-            if (emailElement && typeof emailElement.checkValidity === 'function' && (emailElement.type || '').toLowerCase() === 'email') {
+            if (!usesBlocks && emailElement && typeof emailElement.checkValidity === 'function' && (emailElement.type || '').toLowerCase() === 'email') {
                 isEmailValid = emailElement.checkValidity();
             } else {
                 isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email);
@@ -243,11 +254,15 @@
             payload.country_code &&
             payload.postal_code &&
             payload.address_line &&
-            (payload.phone_number || !phoneRequired)
+            (payload.phone_number || !isFieldRequired(phoneSelectors))
         );
     }
 
     function checkUVBService(payload) {
+        if (usesBlocks && (!hasBlocksCartItems() || blocksRequestPending || getBlocksCart().isCustomerDataUpdating())) {
+            return;
+        }
+
         if (!isCompletePayload(payload)) {
             return;
         }
@@ -260,21 +275,86 @@
         lastSentPayload = payloadKey;
         console.log(ajax_object.checking_message);
 
-        var data = {
-            'action': 'check_if_email_is_flagged',
-            'email': payload.email,
-            'phone_number': payload.phone_number,
-            'country_code': payload.country_code,
-            'postal_code': payload.postal_code,
-            'address_line': payload.address_line
-        };
+        if (usesBlocks) {
+            checkBlocksCustomer(payload, payloadKey);
+            return;
+        }
 
-        // We can also pass the url value separately from ajaxurl for front end AJAX implementations
-        var ajaxUrl = ajax_object.ajax_url ?? ajax_object.ajaxurl;
-        jQuery.post(ajaxUrl, data, function(response) {
-            $('body').trigger('update_checkout');
-            console.log(ajax_object.checked_message);
+        jQuery.post(
+            ajax_object.ajax_url ?? ajax_object.ajaxurl,
+            Object.assign({ action: 'check_if_email_is_flagged' }, payload),
+            function() {
+                $('body').trigger('update_checkout');
+                console.log(ajax_object.checked_message);
+            }
+        ).fail(function() {
+            if (lastSentPayload === payloadKey) {
+                lastSentPayload = null;
+            }
         });
+    }
+
+    async function checkBlocksCustomer(payload, payloadKey) {
+        blocksRequestPending = true;
+
+        try {
+            await window.wc.blocksCheckout.extensionCartUpdate({
+                namespace: ajax_object.blocks_namespace,
+                data: payload,
+                overwriteDirtyCustomerData: false
+            });
+            console.log(ajax_object.checked_message);
+        } catch (error) {
+            lastSentPayload = null;
+        } finally {
+            blocksRequestPending = false;
+            if (blocksUnsubscribe && JSON.stringify(buildBlocksPayload()) !== payloadKey) {
+                scheduleCheck(false);
+            }
+        }
+    }
+
+    function handleBlocksCartChange() {
+        var state = JSON.stringify({
+            payload: buildBlocksPayload(),
+            hasItems: hasBlocksCartItems(),
+            updating: getBlocksCart().isCustomerDataUpdating()
+        });
+        if (state === lastObservedBlocksState) {
+            return;
+        }
+
+        lastObservedBlocksState = state;
+        if (!hasBlocksCartItems()) {
+            clearTimeout(debounceTimer);
+            lastSentPayload = null;
+            return;
+        }
+        scheduleCheck(false);
+    }
+
+    function hasBlocksCartItems() {
+        var cart = getBlocksCart().getCartData();
+        return Array.isArray(cart.items) && cart.items.length > 0;
+    }
+
+    function startBlocksSubscription() {
+        if (blocksUnsubscribe) {
+            return;
+        }
+
+        blocksUnsubscribe = window.wp.data.subscribe(handleBlocksCartChange, window.wc.wcBlocksData.cartStore);
+        lastObservedBlocksState = null;
+        lastSentPayload = null;
+        handleBlocksCartChange();
+    }
+
+    function stopBlocksSubscription() {
+        if (blocksUnsubscribe) {
+            blocksUnsubscribe();
+            blocksUnsubscribe = null;
+        }
+        clearTimeout(debounceTimer);
     }
 
     var LISTENERS_SELECTOR = buildSelector(['email', 'phone', 'country', 'postal', 'address1', 'address2']);
@@ -298,8 +378,7 @@
         }
 
         debounceTimer = setTimeout(function() {
-            var payload = buildPayload();
-            checkUVBService(payload);
+            checkUVBService(buildPayload());
         }, 750);
     }
 
@@ -354,7 +433,17 @@
         scheduleCheck(true);
     }
 
-    window.addEventListener('load', function($) {
+    if (usesBlocks) {
+        if (document.readyState === 'complete') {
+            startBlocksSubscription();
+        }
+        window.addEventListener('load', startBlocksSubscription);
+        window.addEventListener('pageshow', startBlocksSubscription);
+        window.addEventListener('pagehide', stopBlocksSubscription);
+        return;
+    }
+
+    window.addEventListener('load', function() {
         startPoller();
     });
 
