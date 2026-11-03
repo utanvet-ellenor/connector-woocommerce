@@ -26,8 +26,8 @@ class UVBConnectorWooCommerce_Settings
     {
         // This page will be under "Settings"
         add_options_page(
-            __('UV-B Connector', 'uvb-connector-woocommerce'),
-            __('UV-B Connector', 'uvb-connector-woocommerce'),
+            __('ProteCOD', 'uvb-connector-woocommerce'),
+            __('ProteCOD', 'uvb-connector-woocommerce'),
             'manage_options',
             'uvb-connector-woocommerce.php',
             array( $this, 'create_admin_page' )
@@ -46,7 +46,7 @@ class UVBConnectorWooCommerce_Settings
         }
         ?>
         <div class="wrap">
-            <h1><?php _e('UV-B Connector Settings', 'uvb-connector-woocommerce'); ?></h1>
+            <h1><?php _e('ProteCOD Settings', 'uvb-connector-woocommerce'); ?></h1>
             <form method="post" action="options.php">
                 <?php
                     // This prints out all hidden setting fields
@@ -179,7 +179,7 @@ class UVBConnectorWooCommerce_Settings
             printf('<input type="checkbox" id="sandbox_mode" name="uvb_connector_woocommerce_options[sandbox_mode]" />');
         }
 
-        _e('<p><em>Depending on this setting the plugin will use the production or sandbox environment of Utánvét Ellenőr. <strong>Please make sure this is set up correctly.</strong></em></p>', 'uvb-connector-woocommerce');
+        _e('<p><em>Depending on this setting the plugin will use the production or sandbox environment of ProteCOD. <strong>Please make sure this is set up correctly.</strong></em></p>', 'uvb-connector-woocommerce');
 
         if ($sandboxMode) {
             _e('<p><span style="background: linear-gradient(to bottom right, #d20087, #79098f, #0c024a); color: white; font-weight: bold; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 4px;">SANDBOX</span></p>');

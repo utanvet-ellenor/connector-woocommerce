@@ -23,7 +23,7 @@ use UtanvetEllenor\Reasons;
  *
  * @package    UVBConnectorWooCommerce
  * @subpackage UVBConnectorWooCommerce/admin
- * @author     Utánvét Ellenőr <hello@utanvet-ellenor.hu>
+ * @author     ProteCOD <hello@protecod.com>
  */
 class UVBConnectorWooCommerce_Admin {
     /**
@@ -111,7 +111,7 @@ class UVBConnectorWooCommerce_Admin {
 
     public function addColumnFlagged($columns)
     {
-        $columns['uvb_status'] = 'Utánvét Ellenőr státusz';
+        $columns['uvb_status'] = __('ProteCOD status', 'uvb-connector-woocommerce');
 
         return $columns;
     }

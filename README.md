@@ -1,6 +1,6 @@
-=== Utánvét Ellenőr ===
+=== ProteCOD ===
 Contributors: ottoradics
-Tags: cash on delivery,check,filter,utánvét,ellenőr,büntetés,utánvét ellenőr,szűrés
+Tags: cash on delivery,check,filter,utánvét,ellenőr,büntetés,protecod,szűrés
 Tested up to: 7.0.2
 Requires PHP: 8.1
 License: GPLv3
@@ -14,9 +14,11 @@ Connect your WooCommerce site to our SaaS available at https://utanvet-ellenor.h
 ### Installation
 [Register](https://utanvet-ellenor.hu/register) to obtain API keys, then set them in the plugin's settings. The reputation threshold parameter is there to let you customize how strict should the filtering be. This is a number between -1 and +1.
 
-### What is Utánvét Ellenőr?
+### What is ProteCOD?
 
 It is a SaaS provided by Utánvét Ellenőr Kft. from Hungary: a service which will let shop owners filter orders with Cash on Delivery coming from known fraudulent e-mail addresses.
+
+ProteCOD is the international brand; in Hungarian, the service is called Utánvét Ellenőr.
 
 ### How does it work?
 
@@ -37,14 +39,14 @@ When enabled, the plugin sends a WooCommerce email notification to the customer'
 
 ### Privacy implications
 
-To perform customer reputation checks and record delivery outcomes, the plugin sends customer and delivery data to the Utánvét Ellenőr service over HTTPS. Depending on the data available during checkout or on the order, this may include:
+To perform customer reputation checks and record delivery outcomes, the plugin sends customer and delivery data to the ProteCOD service over HTTPS. Depending on the data available during checkout or on the order, this may include:
 * E-mail address
 * Phone number
 * Country code and postal code
 * Delivery address
 * Order ID and delivery outcome when reporting a completed or rejected delivery
 
-These data are processed in accordance with the applicable Utánvét Ellenőr privacy and GDPR documentation. Store owners are responsible for informing their customers about this data processing and ensuring that they have an appropriate legal basis for using the service.
+These data are processed in accordance with the applicable ProteCOD privacy and GDPR documentation. Store owners are responsible for informing their customers about this data processing and ensuring that they have an appropriate legal basis for using the service.
 * In order to use our services, you MUST notify your users that "Automated individual decision-making" might be applied during checkout. For more information, please see GDPR Art. 22.
 
 > Note: this is not a legal advice. Consult your attourney before using this service in production.

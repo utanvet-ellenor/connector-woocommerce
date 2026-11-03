@@ -22,7 +22,7 @@ use UtanvetEllenor\Client;
  *
  * @package    UVBConnectorWooCommerce
  * @subpackage UVBConnectorWooCommerce/public
- * @author     Utánvét Ellenőr <hello@utanvet-ellenor.hu>
+ * @author     ProteCOD <hello@protecod.com>
  */
 class UVBConnectorWooCommerce_Public {
 
@@ -92,7 +92,9 @@ class UVBConnectorWooCommerce_Public {
         wp_localize_script( $this->plugin_name, 'ajax_object', array(
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'ajaxurl' => admin_url( 'admin-ajax.php' ),
-            'user_email' => NULL
+            'user_email' => NULL,
+            'checking_message' => __('[ProteCOD] Checking...', 'uvb-connector-woocommerce'),
+            'checked_message' => __('[ProteCOD] Done!', 'uvb-connector-woocommerce')
         ) );
 	}
 

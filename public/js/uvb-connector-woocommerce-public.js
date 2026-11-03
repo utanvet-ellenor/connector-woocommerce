@@ -258,7 +258,7 @@
         }
 
         lastSentPayload = payloadKey;
-        console.log('[Utánvét Ellenőr] Ellenőrzés...');
+        console.log(ajax_object.checking_message);
 
         var data = {
             'action': 'check_if_email_is_flagged',
@@ -273,7 +273,7 @@
         var ajaxUrl = ajax_object.ajax_url ?? ajax_object.ajaxurl;
         jQuery.post(ajaxUrl, data, function(response) {
             $('body').trigger('update_checkout');
-            console.log('[Utánvét Ellenőr] Kész!');
+            console.log(ajax_object.checked_message);
         });
     }
 

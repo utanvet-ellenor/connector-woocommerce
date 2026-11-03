@@ -1,13 +1,13 @@
 {
   "name": "utanvet-ellenor/connector-woocommerce",
-  "description": "Utánvét Ellenőr integration for WooCommerce",
+  "description": "ProteCOD integration for WooCommerce",
   "minimum-stability": "stable",
   "version": "4.3.7",
   "license": "MIT",
   "authors": [
     {
-      "name": "Utánvét Ellenőr",
-      "email": "hello@utanvet-ellenor.hu",
+      "name": "ProteCOD",
+      "email": "hello@protecod.com",
       "homepage": "https://utanvet-ellenor.hu"
     }
   ],

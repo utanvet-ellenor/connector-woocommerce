@@ -32,7 +32,7 @@ class UVBConnectorWooCommerce_Api_Logger {
         }
 
         wc_get_logger()->warning(
-            'Utánvét Ellenőr API request failed.',
+            __('ProteCOD API request failed.', 'uvb-connector-woocommerce'),
             $context
         );
     }
@@ -50,7 +50,7 @@ class UVBConnectorWooCommerce_Api_Logger {
         }
 
         wc_get_logger()->info(
-            'Utánvét Ellenőr API connection recovered.',
+            __('ProteCOD API connection recovered.', 'uvb-connector-woocommerce'),
             [
                 'source' => self::SOURCE,
                 'operation' => sanitize_key($operation),

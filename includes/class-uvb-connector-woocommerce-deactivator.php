@@ -18,7 +18,7 @@
  * @since      1.0.0
  * @package    UVBConnectorWooCommerce
  * @subpackage UVBConnectorWooCommerce/includes
- * @author     Utánvét Ellenőr <hello@utanvet-ellenor.hu>
+ * @author     ProteCOD <hello@protecod.com>
  */
 class UVBConnectorWooCommerce_Deactivator {
 

@@ -13,11 +13,11 @@
  * @package           UVBConnectorWooCommerce
  *
  * @wordpress-plugin
- * Plugin Name:       Utánvét Ellenőr
+ * Plugin Name:       ProteCOD
  * Plugin URI:        https://utanvet-ellenor.hu
  * Description:       🚨 Kiszállításokat szűrünk és védünk.
  * Version:           4.3.7
- * Author:            Utánvét Ellenőr
+ * Author:            ProteCOD
  * Author URI:        https://utanvet-ellenor.hu
  * License:           GPL-3.0+
  * License URI:       http://www.gnu.org/licenses/gpl-3.0.txt
