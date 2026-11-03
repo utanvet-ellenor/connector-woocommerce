@@ -1,5 +1,10 @@
 <?php
 
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit;
+}
+
 require $argv[1] ?? __DIR__ . '/../includes/class-uvb-connector-woocommerce-customer-data.php';
 
 // This fixture deliberately has no WC_Order::needs_shipping() method.
