@@ -1,0 +1,8 @@
+/.agents export-ignore
+/.aws export-ignore
+/.codex export-ignore
+/.directory export-ignore
+/.gitattributes export-ignore
+/.github export-ignore
+/.gitignore export-ignore
+/tests export-ignore
