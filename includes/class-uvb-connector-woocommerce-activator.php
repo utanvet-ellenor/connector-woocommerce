@@ -1,43 +1,13 @@
 <?php
 
-/**
- * Fired during plugin activation
- *
- * @link       https://utanvet-ellenor.hu
- * @since      1.0.0
- *
- * @package    UVBConnectorWooCommerce
- * @subpackage UVBConnectorWooCommerce/includes
- */
-
-/**
- * Fired during plugin activation.
- *
- * This class defines all code necessary to run during the plugin's activation.
- *
- * @since      1.0.0
- * @package    UVBConnectorWooCommerce
- * @subpackage UVBConnectorWooCommerce/includes
- * @author     ProteCOD <hello@protecod.com>
- */
 class UVBConnectorWooCommerce_Activator {
 
-	/**
-	 * Short Description. (use period)
-	 *
-	 * Long Description.
-	 *
-	 * @since    1.0.0
-	 */
 	public static function activate() {
 	    $options = get_option('uvb_connector_woocommerce_options');
         if (!is_array($options)) {
             $options = [];
         }
 
-        /**
-         * Set default values if they are missing from the database.
-         */
         if (empty($options)) {
             $options['payment_methods_to_hide'] = ['cod'];
             $options['flag_orders'] = true;

@@ -2,45 +2,10 @@
 
 require UVB_CONNECTOR_VENDOR_AUTOLOAD_PATH;
 
-/**
- * The public-facing functionality of the plugin.
- *
- * @link       https://utanvet-ellenor.hu
- * @since      1.0.0
- *
- * @package    UVBConnectorWooCommerce
- * @subpackage UVBConnectorWooCommerce/public
- */
-
-/**
- * The public-facing functionality of the plugin.
- *
- * Defines the plugin name, version, and two examples hooks for how to
- * enqueue the public-facing stylesheet and JavaScript.
- *
- * @package    UVBConnectorWooCommerce
- * @subpackage UVBConnectorWooCommerce/public
- * @author     ProteCOD <hello@protecod.com>
- */
 class UVBConnectorWooCommerce_Public {
 
-	/**
-	 * The ID of this plugin.
-	 *
-	 * @since    1.0.0
-	 * @access   private
-	 * @var      string    $plugin_name    The ID of this plugin.
-	 */
 	private $plugin_name;
-    public const TRANSIENT_PREFIX = UVBConnectorWooCommerce_Checkout_Result_Cache::TRANSIENT_PREFIX;
 
-	/**
-	 * The version of this plugin.
-	 *
-	 * @since    1.0.0
-	 * @access   private
-	 * @var      string    $version    The current version of this plugin.
-	 */
 	private $version;
 
     private $api;
@@ -51,13 +16,6 @@ class UVBConnectorWooCommerce_Public {
     private $checkoutData = null;
     private $storeApiRequest = false;
 
-	/**
-	 * Initialize the class and set its properties.
-	 *
-	 * @since    1.0.0
-	 * @param      string    $plugin_name       The name of the plugin.
-	 * @param      string    $version    The version of this plugin.
-	 */
 	public function __construct( $plugin_name, $version, ?UVBConnectorWooCommerce_Api $api = null ) {
 
 		$this->plugin_name = $plugin_name;
@@ -68,11 +26,6 @@ class UVBConnectorWooCommerce_Public {
         $this->resultResolver = new UVBConnectorWooCommerce_Result_Resolver($this->api, $this->checkoutResultCache);
 	}
 
-	/**
-	 * Register the JavaScript for the public-facing side of the site.
-	 *
-	 * @since    1.0.0
-	 */
 	public function enqueueScripts() {
         if (!function_exists( 'is_woocommerce')) {
             return;
@@ -96,7 +49,6 @@ class UVBConnectorWooCommerce_Public {
         wp_localize_script( $this->plugin_name, 'ajax_object', array(
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'ajaxurl' => admin_url( 'admin-ajax.php' ),
-            'user_email' => NULL,
             'uses_blocks' => $usesBlocks,
             'blocks_namespace' => $this->plugin_name,
             'checking_message' => __('[ProteCOD] Checking...', 'uvb-connector-woocommerce'),
@@ -136,11 +88,6 @@ class UVBConnectorWooCommerce_Public {
         $this->checkoutDecision = null;
     }
 
-    /**
-     * Function to answer AJAX whether the user is flagged or not
-     *
-     * @return void
-     */
 	public function checkIfEmailIsFlagged() {
         $this->checkCheckoutCustomer($this->getResumableCheckoutOrder(), wp_unslash($_POST));
 
@@ -148,13 +95,8 @@ class UVBConnectorWooCommerce_Public {
     }
 
     /**
-     * Function to handle Store API requests, set the blocked transient, and
-     * reject protected payment methods for blocked customers during checkout.
-     *
-     * @param mixed $object WC_Customer or WC_Order.
-     * @param mixed $request WP_REST_Request.
-     * @return void
-     * @throws \Automattic\WooCommerce\StoreApi\Exceptions\RouteException When a blocked customer selects a protected payment method.
+     * @param WC_Customer|WC_Order $object
+     * @param WP_REST_Request $request
      */
     public function checkIfEmailIsFlaggedStoreApi($object, $request) {
         if (!$request || !is_object($request) || !method_exists($request, 'get_param')) {
@@ -248,13 +190,6 @@ class UVBConnectorWooCommerce_Public {
         $order->update_meta_data(UVBConnectorWooCommerce_Customer_Data::SHIPPING_PHONE_PROVIDED_META_KEY, $provided ? 'yes' : 'no');
     }
 
-    /**
-     * Check classic checkout data before saving, then validate protected payment methods.
-     *
-     * @param array $data Checkout data.
-     * @param WP_Error $errors Checkout validation errors.
-     * @return void
-     */
     public function validateSelectedPaymentMethod($data, $errors) {
         $paymentAvailabilityError = $errors->get_error_messages('payment') === [__('Invalid payment method.', 'woocommerce')];
         if ($errors->has_errors() && (!$paymentAvailabilityError || array_diff($errors->get_error_codes(), ['payment']))) {
@@ -331,12 +266,6 @@ class UVBConnectorWooCommerce_Public {
         return is_array($paymentMethods) ? $paymentMethods : [];
     }
 
-    /**
-     * Check if the user is flagged or not
-     *
-     * @param $email
-     * @return mixed|null
-     */
     public function checkInUVBService($email, $countryCode = '', $postalCode = '', $phoneNumber = '', $addressLine = '') {
         return $this->api->request([
             'email' => $email,
@@ -347,30 +276,17 @@ class UVBConnectorWooCommerce_Public {
         ]);
     }
 
-    /**
-     * Remove payment options from available gateways
-     *
-     * @param $available_gateways
-     * @return array
-     */
     public function removePaymentMethods($available_gateways) : array {
         return $this->excludePaymentMethods($available_gateways, 'payment_methods_to_hide');
     }
 
-    /**
-     * Hide fallback payment method from available gateways
-     *
-     * @param $available_gateways
-     *
-     * @return array
-     */
     public function hideFallbackPaymentMethod($available_gateways) : array {
         return $this->excludePaymentMethods($available_gateways, 'fallback_payment_methods');
     }
 
     private function excludePaymentMethods(array $gateways, string $optionName): array {
         $paymentMethods = $this->getPaymentMethods($optionName);
-        foreach ($gateways as $paymentMethod => $gateway) {
+        foreach (array_keys($gateways) as $paymentMethod) {
             if (in_array($paymentMethod, $paymentMethods)) {
                 unset($gateways[$paymentMethod]);
             }
@@ -383,12 +299,6 @@ class UVBConnectorWooCommerce_Public {
         return $this->checkoutResultCache->getSessionKey($cartToken, $allowRequestCartToken);
     }
 
-    /**
-     * Update available payment options
-     *
-     * @param $available_gateways
-     * @return mixed
-     */
     public function updateAvailablePaymentOptions($available_gateways) {
         if ( is_admin() ) {
             return $this->hideFallbackPaymentMethod($available_gateways);

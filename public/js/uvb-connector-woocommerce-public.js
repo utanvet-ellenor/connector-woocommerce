@@ -304,7 +304,7 @@
                 overwriteDirtyCustomerData: false
             });
             console.log(ajax_object.checked_message);
-        } catch (error) {
+        } catch {
             lastSentPayload = null;
         } finally {
             blocksRequestPending = false;

@@ -16,7 +16,7 @@ class UVBTestLegacyCustomerOrder {
         return $type === 'shipping' ? $this->shipping : $this->billing;
     }
 
-    public function get_meta($key, $single = true): string {
+    public function get_meta(): string {
         return '';
     }
 

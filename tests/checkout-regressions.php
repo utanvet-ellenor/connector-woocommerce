@@ -7,9 +7,9 @@
 namespace UtanvetEllenor {
     function curl_init() { $GLOBALS['uvbTestApiCalls']++; return new \stdClass(); }
     function curl_setopt_array($handle, $options) { $GLOBALS['uvbTestLastApiRequest'] = json_decode($options[CURLOPT_POSTFIELDS], true); }
-    function curl_exec($handle) { return json_encode($GLOBALS['uvbTestApiResponse']); }
-    function curl_error($handle) { return ''; }
-    function curl_close($handle) {}
+    function curl_exec() { return json_encode($GLOBALS['uvbTestApiResponse']); }
+    function curl_error() { return ''; }
+    function curl_close() {}
 }
 
 namespace {
@@ -72,7 +72,6 @@ namespace {
         'ResultProcessingCompatibility' => false,
         'OrderReasonStorage' => false,
     ];
-    // Set UVB_CHECKOUT_SCENARIO to run one scenario without running its predecessors.
     $selectedScenario = getenv('UVB_CHECKOUT_SCENARIO');
     if ($selectedScenario) {
         if (!array_key_exists($selectedScenario, $scenarios)) {

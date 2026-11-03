@@ -1,35 +1,7 @@
 <?php
 
-/**
- * Define the internationalization functionality
- *
- * Loads and defines the internationalization files for this plugin
- * so that it is ready for translation.
- *
- * @link       https://utanvet-ellenor.hu
- * @since      1.0.0
- *
- * @package    UVBConnectorWooCommerce
- * @subpackage UVBConnectorWooCommerce/includes
- */
-
-/**
- * Define the internationalization functionality.
- *
- * Loads and defines the internationalization files for this plugin
- * so that it is ready for translation.
- *
- * @since      1.0.0
- * @package    UVBConnectorWooCommerce
- * @subpackage UVBConnectorWooCommerce/includes
- * @author     ProteCOD <hello@protecod.com>
- */
 class UVBConnectorWooCommerce_i18n {
-	/**
-	 * Load the plugin text domain for translation.
-	 *
-	 * @since    1.0.0
-	 */
+
 	public function loadPluginTextdomain() {
 
 		load_plugin_textdomain(

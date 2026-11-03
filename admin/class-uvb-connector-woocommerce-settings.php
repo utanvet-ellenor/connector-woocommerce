@@ -1,14 +1,9 @@
 <?php
 class UVBConnectorWooCommerce_Settings
 {
-    /**
-     * Holds the values to be used in the fields callbacks
-     */
+
     private $options;
 
-    /**
-     * Start up
-     */
     public function __construct()
     {
         $this->options = get_option( 'uvb_connector_woocommerce_options' );
@@ -17,12 +12,9 @@ class UVBConnectorWooCommerce_Settings
         }
     }
 
-    /**
-     * Add options page
-     */
     public function addPluginPage()
     {
-        // This page will be under "Settings"
+
         add_options_page(
             __('ProteCOD', 'uvb-connector-woocommerce'),
             __('ProteCOD', 'uvb-connector-woocommerce'),
@@ -32,12 +24,9 @@ class UVBConnectorWooCommerce_Settings
         );
     }
 
-    /**
-     * Options page callback
-     */
     public function createAdminPage()
     {
-        // Set class property
+
         $this->options = get_option( 'uvb_connector_woocommerce_options' );
         if (!is_array($this->options)) {
             $this->options = [];
@@ -47,7 +36,7 @@ class UVBConnectorWooCommerce_Settings
             <h1><?php _e('ProteCOD Settings', 'uvb-connector-woocommerce'); ?></h1>
             <form method="post" action="options.php">
                 <?php
-                    // This prints out all hidden setting fields
+
                     settings_fields( 'uvb_connector_woocommerce_group' );
                     do_settings_sections( 'uvb-connector-woocommerce-admin' );
                     submit_button();
@@ -57,9 +46,6 @@ class UVBConnectorWooCommerce_Settings
         <?php
     }
 
-    /**
-     * Register and add settings
-     */
     public function pageInit()
     {
         register_setting(
@@ -124,13 +110,6 @@ class UVBConnectorWooCommerce_Settings
         );
     }
 
-    /**
-     * Sanitize each setting field as needed
-     *
-     * @param array $input Contains all settings fields as array keys
-     *
-     * @return array
-     */
     public function sanitize( $input )
     {
         $input_array = array();
@@ -156,17 +135,11 @@ class UVBConnectorWooCommerce_Settings
         return $input_array;
     }
 
-    /**
-     * Print the Section text
-     */
     public function printSectionInfo()
     {
         _e('Enter your API keys and set your preferences. ', 'uvb-connector-woocommerce');
     }
 
-    /**
-     * Get the settings option array and print one of its values
-     */
     public function sandboxModeCallback()
     {
         $sandboxMode = isset($this->options['sandbox_mode']) ? $this->options['sandbox_mode'] : false;
@@ -184,9 +157,6 @@ class UVBConnectorWooCommerce_Settings
         }
     }
 
-    /**
-     * Get the settings option array and print one of its values
-     */
     public function publicApiKeyCallback()
     {
         printf(
@@ -195,9 +165,6 @@ class UVBConnectorWooCommerce_Settings
         );
     }
 
-    /**
-     * Get the settings option array and print one of its values
-     */
     public function privateApiKeyCallback()
     {
         printf(
@@ -206,9 +173,6 @@ class UVBConnectorWooCommerce_Settings
         );
     }
 
-    /**
-     * Get the settings option array and print one of its values
-     */
     public function reputationThresholdCallback()
     {
         printf(
@@ -219,9 +183,6 @@ class UVBConnectorWooCommerce_Settings
         _e('<p><em>Calculated with the following formula: <code>(good-bad) / all</code>, so a 0.5 reputation can mean 6 successful and 2 rejected deliveries.</em></p>', 'uvb-connector-woocommerce');
     }
 
-    /**
-     * Get the settings option array and print one of its values
-     */
     public function paymentMethodsToHideCallback()
     {
         $this->renderPaymentMethods(

@@ -1,27 +1,9 @@
 <?php
 
-/**
- * Customer UVB flagged email.
- *
- * @link       https://utanvet-ellenor.hu
- * @since      4.3.0
- *
- * @package    UVBConnectorWooCommerce
- * @subpackage UVBConnectorWooCommerce/includes/emails
- */
-
 defined( 'ABSPATH' ) || exit;
 
-/**
- * Notify the customer when an order enters the UVB flagged status.
- *
- * @since 4.3.0
- */
 class UVBConnectorWooCommerce_Email_Customer_UVB_Flagged extends WC_Email {
 
-	/**
-	 * Set up the email.
-	 */
 	public function __construct() {
 		$this->id             = 'customer_uvb_flagged';
 		$this->customer_email = true;
@@ -44,51 +26,25 @@ class UVBConnectorWooCommerce_Email_Customer_UVB_Flagged extends WC_Email {
 		parent::__construct();
 	}
 
-	/**
-	 * Initialise the email settings.
-	 *
-	 * @return void
-	 */
 	public function init_form_fields() {
 		parent::init_form_fields();
 
 		$this->form_fields['enabled']['default'] = 'no';
 	}
 
-	/**
-	 * Get the default subject.
-	 *
-	 * @return string
-	 */
 	public function get_default_subject() {
 		return __( '[{site_title}]: Delivery for order #{order_number} was refused', 'uvb-connector-woocommerce' );
 	}
 
-	/**
-	 * Get the default heading.
-	 *
-	 * @return string
-	 */
 	public function get_default_heading() {
 		return __( 'Refused delivery: #{order_number}', 'uvb-connector-woocommerce' );
 	}
 
-	/**
-	 * Get the default additional content.
-	 *
-	 * @return string
-	 */
 	public function get_default_additional_content() {
 		return __( 'Please contact us to resolve this matter.', 'uvb-connector-woocommerce' );
 	}
 
-	/**
-	 * Trigger the email.
-	 *
-	 * @param int            $order_id Order ID.
-	 * @param WC_Order|false $order    Order instance.
-	 * @return void
-	 */
+	/** @param WC_Order|false $order */
 	public function trigger( $order_id, $order = false ) {
 		$this->setup_locale();
 
@@ -121,11 +77,6 @@ class UVBConnectorWooCommerce_Email_Customer_UVB_Flagged extends WC_Email {
 		$this->restore_locale();
 	}
 
-	/**
-	 * Get the HTML content.
-	 *
-	 * @return string
-	 */
 	public function get_content_html() {
 		return wc_get_template_html(
 			$this->template_html,
@@ -142,11 +93,6 @@ class UVBConnectorWooCommerce_Email_Customer_UVB_Flagged extends WC_Email {
 		);
 	}
 
-	/**
-	 * Get the plain-text content.
-	 *
-	 * @return string
-	 */
 	public function get_content_plain() {
 		return wc_get_template_html(
 			$this->template_plain,

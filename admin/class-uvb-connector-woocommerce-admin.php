@@ -4,54 +4,14 @@ require UVB_CONNECTOR_VENDOR_AUTOLOAD_PATH;
 
 use UtanvetEllenor\Reasons;
 
-/**
- * The admin-specific functionality of the plugin.
- *
- * @link       https://utanvet-ellenor.hu
- * @since      1.0.0
- *
- * @package    UVBConnectorWooCommerce
- * @subpackage UVBConnectorWooCommerce/admin
- */
-
-/**
- * The admin-specific functionality of the plugin.
- *
- * Defines the plugin name, version, and two examples hooks for how to
- * enqueue the admin-specific stylesheet and JavaScript.
- *
- * @package    UVBConnectorWooCommerce
- * @subpackage UVBConnectorWooCommerce/admin
- * @author     ProteCOD <hello@protecod.com>
- */
 class UVBConnectorWooCommerce_Admin {
-    /**
-     * The ID of this plugin.
-     *
-     * @since    1.0.0
-     * @access   private
-     * @var      string    $plugin_name    The ID of this plugin.
-     */
+
     private $plugin_name;
 
-    /**
-     * The version of this plugin.
-     *
-     * @since    1.0.0
-     * @access   private
-     * @var      string    $version    The current version of this plugin.
-     */
     private $version;
 
     private $api;
 
-    /**
-     * Initialize the class and set its properties.
-     *
-     * @since    1.0.0
-     * @param      string    $plugin_name       The name of this plugin.
-     * @param      string    $version    The version of this plugin.
-     */
     public function __construct( $plugin_name, $version, ?UVBConnectorWooCommerce_Api $api = null ) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
@@ -59,20 +19,10 @@ class UVBConnectorWooCommerce_Admin {
         $this->api = $api ?? new UVBConnectorWooCommerce_Api();
     }
 
-    /**
-     * Register the stylesheets for the admin area.
-     *
-     * @since    1.0.0
-     */
     public function enqueueStyles() {
         wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/uvb-connector-woocommerce-admin.css', array(), $this->version, 'all' );
     }
 
-    /*
-     * Register WooCommerce order statuses
-     *
-     * @since   1.0.0
-     */
     public function registerOrderStatusFlagged() {
         register_post_status( 'wc-uvb_flagged', array(
             'label'                     => 'Rendelést nem vette át',
@@ -84,12 +34,6 @@ class UVBConnectorWooCommerce_Admin {
         ) );
     }
 
-    /**
-     * Add WooCommerce order statuses
-     *
-     * @since   1.0.0
-     * @return  array
-     */
     public function addOrderStatusFlagged($order_statuses)
     {
         $order_statuses['wc-uvb_flagged'] = 'Rendelést nem vette át';
@@ -222,23 +166,11 @@ class UVBConnectorWooCommerce_Admin {
             . ' title="' . esc_attr($label) . '">' . $appearance['icon'] . esc_html($label) . '</div>';
     }
 
-    /**
-     * Flag the user if the order ends up in the 'Flagged' order status
-     *
-     * @param $order_id
-     * @return void
-     */
     public function sendMinusToUVBService($order_id)
     {
         return $this->sendSignalToUVBService($order_id, -1);
     }
 
-    /**
-     * Pat the user if the order ends up in the 'Completed' order status
-     *
-     * @param $order_id
-     * @return void
-     */
     public function sendPlusToUVBService($order_id)
     {
         return $this->sendSignalToUVBService($order_id, 1);
@@ -248,9 +180,6 @@ class UVBConnectorWooCommerce_Admin {
     {
         $order = wc_get_order($order_id);
 
-        /**
-         * Restock product automatically.
-         */
         if ($outcome === -1) {
             wc_maybe_increase_stock_levels($order_id);
         }
