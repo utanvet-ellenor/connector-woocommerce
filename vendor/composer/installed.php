@@ -1,8 +1,8 @@
 <?php return array(
     'root' => array(
         'name' => 'utanvet-ellenor/connector-woocommerce',
-        'pretty_version' => '4.3.7',
-        'version' => '4.3.7.0',
+        'pretty_version' => '5.0.0',
+        'version' => '5.0.0.0',
         'reference' => null,
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
@@ -20,8 +20,8 @@
             'dev_requirement' => false,
         ),
         'utanvet-ellenor/connector-woocommerce' => array(
-            'pretty_version' => '4.3.7',
-            'version' => '4.3.7.0',
+            'pretty_version' => '5.0.0',
+            'version' => '5.0.0.0',
             'reference' => null,
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',

@@ -2,7 +2,7 @@
   "name": "utanvet-ellenor/connector-woocommerce",
   "description": "ProteCOD integration for WooCommerce",
   "minimum-stability": "stable",
-  "version": "4.3.7",
+  "version": "5.0.0",
   "license": "MIT",
   "authors": [
     {
