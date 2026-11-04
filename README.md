@@ -1,4 +1,4 @@
-=== ProteCOD ===
+=== Utánvét Ellenőr | ProteCOD ===
 Contributors: ottoradics
 Tags: cash on delivery,check,filter,utánvét,ellenőr,büntetés,protecod,szűrés
 Tested up to: 7.0.2
