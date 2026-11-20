@@ -4,7 +4,7 @@
  * Plugin Name:       Utánvét Ellenőr | ProteCOD
  * Plugin URI:        https://utanvet-ellenor.hu
  * Description:       🚨 Kiszállításokat szűrünk és védünk.
- * Version:           5.0.1
+ * Version:           5.0.3
  * Author:            ProteCOD
  * Author URI:        https://utanvet-ellenor.hu
  * License:           GPL-3.0+
@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-define( 'UVB_CONNECTOR_WOOCOMMERCE_VERSION', '5.0.1' );
+define( 'UVB_CONNECTOR_WOOCOMMERCE_VERSION', '5.0.3' );
 
 define( 'UVB_CONNECTOR_VENDOR_AUTOLOAD_PATH', plugin_dir_path(__FILE__) . 'vendor/autoload.php');
 
