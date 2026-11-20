@@ -1235,6 +1235,36 @@ function uvbTestAdminApi(UVBCheckoutTestFixture $fixture): void {
         && UVBConnectorWooCommerce_Order_Result::read(new WC_Order($adminOrder->get_id()))['blocked'] === false);
 }
 
+function uvbTestApiEnvironments(UVBCheckoutTestFixture $fixture): void {
+    $data = UVBConnectorWooCommerce_Customer_Data::fromAddresses([], uvbTestAddress());
+    $GLOBALS['uvbTestApiResponse'] = (object) ['status' => 200];
+
+    foreach ([true, false] as $sandbox) {
+        $api = new UVBConnectorWooCommerce_Api([
+            'public_key' => 'synthetic-public',
+            'private_key' => 'synthetic-private',
+            'threshold' => 0.5,
+            'sandbox' => $sandbox,
+        ]);
+        $baseUrl = $sandbox ? 'https://sandbox.utanvet-ellenor.hu/api/v2' : 'https://utanvet-ellenor.hu/api/v2';
+        $environment = $sandbox ? 'sandbox' : 'production';
+
+        $api->request($data);
+        $fixture->record('Reputation checks use the configured environment: ' . $environment,
+            $GLOBALS['uvbTestLastApiUrl'] === $baseUrl . '/request'
+            && $GLOBALS['uvbTestLastApiRequest']['threshold'] === 0.5);
+
+        foreach ([-1, 1] as $outcome) {
+            $api->sendSignal($data, 'synthetic-order', $outcome);
+            $fixture->record('Delivery outcomes use the configured environment: ' . $environment . '/' . $outcome,
+                $GLOBALS['uvbTestLastApiUrl'] === $baseUrl . '/signal'
+                && $GLOBALS['uvbTestLastApiRequest']['outcome'] === $outcome
+                && $GLOBALS['uvbTestLastApiRequest']['orderId'] === 'synthetic-order'
+                && !isset($GLOBALS['uvbTestLastApiRequest']['threshold']));
+        }
+    }
+}
+
 function uvbTestCacheLifetime(UVBCheckoutTestFixture $fixture): void {
     $data = UVBConnectorWooCommerce_Customer_Data::fromAddresses([], uvbTestAddress());
     $public = new UVBConnectorWooCommerce_Public('uvb-connector-woocommerce', 'test');

@@ -6,7 +6,10 @@
  */
 namespace UtanvetEllenor {
     function curl_init() { $GLOBALS['uvbTestApiCalls']++; return new \stdClass(); }
-    function curl_setopt_array($handle, $options) { $GLOBALS['uvbTestLastApiRequest'] = json_decode($options[CURLOPT_POSTFIELDS], true); }
+    function curl_setopt_array($handle, $options) {
+        $GLOBALS['uvbTestLastApiRequest'] = json_decode($options[CURLOPT_POSTFIELDS], true);
+        $GLOBALS['uvbTestLastApiUrl'] = $options[CURLOPT_URL];
+    }
     function curl_exec() { return json_encode($GLOBALS['uvbTestApiResponse']); }
     function curl_error() { return ''; }
     function curl_close() {}
@@ -67,6 +70,7 @@ namespace {
         'VirtualOrderPersistence' => true,
         'ClassicAddressRefresh' => true,
         'AdminApi' => false,
+        'ApiEnvironments' => false,
         'CacheLifetime' => true,
         'FrontendRetryDecisions' => true,
         'ReadOnlyResultLookup' => true,

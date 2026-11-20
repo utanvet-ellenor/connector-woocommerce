@@ -27,6 +27,7 @@ class UVBConnectorWooCommerce_Api {
 
     private function createClient(array $data): Client {
         $client = new Client($this->configuration['public_key'], $this->configuration['private_key']);
+        $client->sandbox = $this->configuration['sandbox'];
         $client->email = $data['email'];
         $client->countryCode = $data['country_code'];
         $client->postalCode = $data['postal_code'];
@@ -39,7 +40,6 @@ class UVBConnectorWooCommerce_Api {
     public function request(array $data) {
         $client = $this->createClient($data);
         $client->threshold = $this->configuration['threshold'];
-        $client->sandbox = $this->configuration['sandbox'];
 
         return $client->sendRequest();
     }

@@ -30,6 +30,7 @@ class UVBCheckoutTestFixture {
         $GLOBALS['uvbTestApiCalls'] = 0;
         $GLOBALS['uvbTestApiResponse'] = null;
         $GLOBALS['uvbTestLastApiRequest'] = null;
+        $GLOBALS['uvbTestLastApiUrl'] = null;
         $GLOBALS['uvbTestOrders'] = [];
         WC()->cart->empty_cart();
         $this->clearSession();
